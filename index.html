@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aira - your free AI assistant</title>
+<meta name="description" content="Chat with Aira, a friendly free AI assistant. Ask anything, in English or Hinglish.">
+<meta property="og:title" content="Aira - your free AI assistant">
+<meta property="og:description" content="Chat with Aira, a friendly free AI assistant. Ask anything, in English or Hinglish.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="__ORIGIN__/">
+<meta property="og:image" content="__ORIGIN__/static/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#07030f">
+<link rel="icon" type="image/svg+xml" href="/static/logo.svg">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<div id="nofile" class="nofile">This page must be opened through the server. In your terminal run: python app.py  and then open http://127.0.0.1:5000</div>
+<div id="scrim" class="scrim" hidden></div>
+<aside id="drawer" class="drawer" aria-label="Saved chats" hidden>
+  <div class="drawer-head"><strong>Your chats</strong><button id="drawerClose" class="ghost icon" type="button" aria-label="Close">&times;</button></div>
+  <button id="drawerNew" class="primary wide" type="button">+ New chat</button>
+  <p id="drawerGuest" class="muted">Log in to save your chats online and open them on any device.</p>
+  <ul id="chatList" class="chatlist"></ul>
+</aside>
+<div class="app">
+  <header class="top">
+    <button id="menuBtn" class="ghost icon" type="button" aria-label="Saved chats">&#9776;</button>
+    <div class="brand">
+      <img class="logoimg" src="static/logo.svg" alt="" width="36" height="36">
+      <div>
+        <h1>Aira</h1>
+        <p class="tag">Free AI assistant</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="newChat" class="ghost" type="button">New</button>
+      <button id="openFeedback" class="ghost" type="button">Feedback</button>
+      <button id="accountBtn" class="ghost" type="button">Log in</button>
+    </div>
+  </header>
+
+  <main id="chat" class="chat" aria-live="polite">
+    <section id="welcome" class="welcome hero">
+      <img class="hero-logo" src="static/logo.svg" alt="Aira logo" width="104" height="104">
+      <h2>Aira AI</h2>
+      <p class="sub">Think &middot; Ask &middot; Create &middot; Explore</p>
+      <p>Your free personal AI. Chat in English or Hinglish.</p>
+      <div class="features">
+        <div class="feature"><b>Chat</b><span>Ask anything</span></div>
+        <div class="feature" data-feature="search"><b>Search</b><span>Web answers with sources</span></div>
+        <div class="feature" data-feature="image"><b>Photos</b><span>Understand pictures</span></div>
+        <div class="feature"><b>Builder</b><span>Make a website</span></div>
+      </div>
+      <div class="chips" id="chips">
+        <button type="button" class="chip">Explain how the internet works in simple words</button>
+        <button type="button" class="chip">Write a short, funny birthday message for my friend</button>
+        <button type="button" class="chip">Give me a 3-day plan to learn Python basics</button>
+        <button type="button" class="chip">Mujhe ek acchi career advice do after 12th</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bottom">
+    <div class="controls">
+      <label class="sr" for="mode">Mode</label>
+      <select id="mode" aria-label="Mode"></select>
+      <label id="searchWrap" class="toggle" hidden><input type="checkbox" id="searchOn"> Search web</label>
+      <button id="attachBtn" class="ghost" type="button" hidden>Photo</button>
+      <input id="fileInput" type="file" accept="image/*" hidden>
+      <span id="thumbWrap" class="thumbwrap" hidden><img id="thumb" alt="Attached photo"><button id="thumbX" type="button" aria-label="Remove photo">&times;</button></span>
+    </div>
+    <form id="form" class="composer" autocomplete="off">
+      <textarea id="input" rows="1" maxlength="2000" placeholder="Message Aira..." aria-label="Message"></textarea>
+      <button id="send" class="send" type="submit" aria-label="Send">Send</button>
+      <button id="stop" class="send stop" type="button" aria-label="Stop" hidden>Stop</button>
+    </form>
+    <p class="note">
+      <span id="left"></span>
+      Aira is an AI and can make mistakes. Don't share passwords or private details.
+      <a href="/privacy">Privacy</a>
+      <a id="instaLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Instagram</a>
+    </p>
+  </footer>
+</div>
+
+<dialog id="feedbackDialog" class="dialog">
+  <form id="feedbackForm" method="dialog">
+    <h3>Send feedback</h3>
+    <label for="fbType">What is it about?</label>
+    <select id="fbType">
+      <option>Problem</option><option>Idea</option><option>Question</option><option>Praise</option>
+    </select>
+    <label>How do you like Aira?</label>
+    <div class="stars" id="stars" role="group" aria-label="Rating">
+      <button type="button" data-v="1" aria-label="1 star">&#9734;</button>
+      <button type="button" data-v="2" aria-label="2 stars">&#9734;</button>
+      <button type="button" data-v="3" aria-label="3 stars">&#9734;</button>
+      <button type="button" data-v="4" aria-label="4 stars">&#9734;</button>
+      <button type="button" data-v="5" aria-label="5 stars">&#9734;</button>
+    </div>
+    <label for="fbText">Your message</label>
+    <textarea id="fbText" rows="4" maxlength="1000" placeholder="Tell me what happened or what you want..."></textarea>
+    <label for="fbContact">Email or WhatsApp (optional, only if you want a reply)</label>
+    <input id="fbContact" type="text" maxlength="100" autocomplete="off">
+    <p id="fbStatus" class="status" role="status"></p>
+    <div class="row">
+      <button type="button" id="fbCancel" class="ghost">Close</button>
+      <button type="submit" id="fbSend" class="primary">Send</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="authDialog" class="dialog">
+  <form id="authForm" method="dialog">
+    <h3 id="authTitle">Log in</h3>
+    <label for="authEmail">Email</label>
+    <input id="authEmail" type="email" maxlength="120" autocomplete="email" required>
+    <label for="authPass">Password</label>
+    <input id="authPass" type="password" minlength="8" maxlength="100" autocomplete="current-password" required>
+    <p class="muted small">There is no password reset by email, so remember your password.</p>
+    <p id="authStatus" class="status" role="status"></p>
+    <div class="row">
+      <button type="button" id="authSwitch" class="ghost">Create account</button>
+      <button type="button" id="authCancel" class="ghost">Close</button>
+      <button type="submit" id="authGo" class="primary">Log in</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="accountDialog" class="dialog">
+  <form id="accountForm" method="dialog">
+    <h3>Your account</h3>
+    <p id="accountEmail" class="muted"></p>
+    <label for="delPass">To delete your account and all saved chats, type your password:</label>
+    <input id="delPass" type="password" maxlength="100" autocomplete="current-password">
+    <p id="accountStatus" class="status" role="status"></p>
+    <div class="row">
+      <button type="button" id="logoutBtn" class="ghost">Log out</button>
+      <button type="button" id="deleteBtn" class="ghost danger">Delete account</button>
+      <button type="button" id="accountClose" class="primary">Close</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="previewDialog" class="dialog wide-dialog">
+  <div class="pvbar"><span>Preview (runs in a safe sandbox)</span><button type="button" id="pvClose" class="ghost">Close</button></div>
+  <div id="pvHolder" class="pvholder"></div>
+</dialog>
+<script src="static/app.js"></script>
+</body>
+</html>
