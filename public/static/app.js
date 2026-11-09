@@ -12,6 +12,7 @@
 
   let messages = [];
   let chatId = newId();
+  let chatProject = null;     // id of the project this chat belongs to (logged-in only)
   let busy = false, controller = null, pinned = true;
   let user = null;            // email when logged in
   let attached = null;        // data URL of the photo waiting to be sent
@@ -47,13 +48,13 @@
       const d = JSON.parse(localStorage.getItem(STORE) || "null");
       if (d && Array.isArray(d.messages)) {
         const ok = d.messages.filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string");
-        return { id: /^[a-f0-9]{8,32}$/.test(d.id || "") ? d.id : newId(), mode: d.mode, messages: ok };
+        return { id: /^[a-f0-9]{8,32}$/.test(d.id || "") ? d.id : newId(), mode: d.mode, messages: ok, project: /^[a-f0-9]{16}$/.test(d.project || "") ? d.project : null };
       }
     } catch (e) { /* storage may be blocked */ }
     return null;
   }
   function saveLocal() {
-    try { localStorage.setItem(STORE, JSON.stringify({ id: chatId, mode: modeSel.value, messages: messages.slice(-KEEP) })); } catch (e) { /* ignore */ }
+    try { localStorage.setItem(STORE, JSON.stringify({ id: chatId, mode: modeSel.value, project: chatProject, messages: messages.slice(-KEEP) })); } catch (e) { /* ignore */ }
   }
 
   // ---------- safe text formatting ----------
@@ -152,7 +153,8 @@
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
   });
 
-  function leftText(n) { leftEl.textContent = n + " messages left today."; }
+  function notify() { document.dispatchEvent(new Event("aira:update")); }
+  function leftText(n) { leftEl.textContent = n + " messages left today."; notify(); }
 
   // ---------- modes, search toggle ----------
   function updatePlaceholder() {
@@ -214,13 +216,14 @@
     try {
       const res = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
-        body: JSON.stringify({ messages: sendList, mode: modeSel.value, search: searchOn.checked && features.search, image: photo || undefined }),
+        body: JSON.stringify({ messages: sendList, mode: modeSel.value, search: searchOn.checked && features.search, image: photo || undefined, project_id: chatProject || undefined }),
       });
       const left = res.headers.get("X-Messages-Left");
       if (left !== null) leftText(left);
       if (!res.ok) {
         let reason = "Something went wrong. Please try again.";
         try { reason = (await res.json()).error || reason; } catch (e) { /* not JSON */ }
+        if (res.status === 404 && chatProject) { chatProject = null; saveLocal(); notify(); reason = "That project is no longer available, so this chat is now outside any project. Please send your message again."; }
         bubble.parentElement.classList.add("error");
         bubble.textContent = reason;
         messages.pop();
@@ -249,7 +252,7 @@
         messages.pop();
       }
     } finally {
-      setBusy(false); controller = null; saveLocal(); saveRemote(); input.focus();
+      setBusy(false); controller = null; saveLocal(); saveRemote(); input.focus(); notify();
     }
   }
   form.addEventListener("submit", (e) => { e.preventDefault(); ask(input.value); });
@@ -258,7 +261,7 @@
 
   function newChat() {
     if (busy && controller) controller.abort();
-    chatId = newId(); messages = []; clearPhoto(); saveLocal(); showAll(); closeDrawer(); input.focus();
+    chatId = newId(); chatProject = null; messages = []; clearPhoto(); saveLocal(); showAll(); closeDrawer(); input.focus(); notify();
   }
   $("#newChat").addEventListener("click", newChat);
   $("#drawerNew").addEventListener("click", newChat);
@@ -290,6 +293,7 @@
       li.append(open, del); chatList.appendChild(li);
     });
     markCurrent();
+    notify();
   }
   async function loadList() {
     if (!user) { savedChats = []; drawList(); return; }
@@ -301,16 +305,16 @@
     if (!user || !messages.length) return;
     const first = messages.find((m) => m.role === "user");
     const title = (first ? first.content : "New chat").slice(0, 40);
-    const r = await api("/api/chats/" + chatId, "PUT", { title, mode: modeSel.value, messages });
+    const r = await api("/api/chats/" + chatId, "PUT", { title, mode: modeSel.value, messages, project_id: chatProject });
     if (r.ok) loadList();
   }
   async function openSaved(id) {
     if (busy && controller) controller.abort();
     const r = await api("/api/chats/" + id);
     if (!r.ok) { alert(r.data.error || "Could not open that chat."); return; }
-    chatId = id; messages = r.data.messages;
+    chatId = id; messages = r.data.messages; chatProject = r.data.project_id || null;
     if ([...modeSel.options].some((o) => o.value === r.data.mode)) modeSel.value = r.data.mode;
-    updatePlaceholder(); saveLocal(); showAll(); closeDrawer();
+    updatePlaceholder(); saveLocal(); showAll(); closeDrawer(); notify();
   }
   async function removeSaved(id) {
     if (!confirm("Delete this chat?")) return;
@@ -333,7 +337,9 @@
   function openDialog(d) { if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", ""); }
   function setUser(email) {
     user = email;
+    if (!email) chatProject = null;
     $("#accountBtn").textContent = email ? "Account" : "Log in";
+    notify();
     if (leftEl.textContent) leftText(email ? userPerDay : perDay);
   }
   $("#accountBtn").addEventListener("click", () => {
@@ -410,12 +416,41 @@
     document.querySelectorAll(".feature[data-feature]").forEach((el) => { el.hidden = !features[el.dataset.feature]; });
     searchWrap.hidden = !features.search; searchOn.checked = !!prefs.search && features.search;
     attachBtn.hidden = !features.image;
-    if (local) { chatId = local.id; messages = local.messages; }
+    if (local) { chatId = local.id; messages = local.messages; chatProject = local.project; }
     setUser(meRes.ok ? meRes.data.email : null);
     updatePlaceholder(); showAll(); paintStars();
     if (user) loadList(); else drawList();
     input.focus();
   }
   if (location.protocol === "file:") $("#nofile").style.display = "block";
-  start();
+  // A small, read-only doorway for the dashboard (dashboard.js). It does not change how chat works.
+  window.AiraApp = {
+    get state() {
+      return {
+        user, savedChats, features, perDay, userPerDay, hasMessages: messages.length > 0,
+        modes: [...modeSel.options].map((o) => ({ id: o.value, label: o.textContent })),
+        mode: modeSel.value, project: chatProject,
+      };
+    },
+    // Put the current chat in a project (or null to take it out). If it is already saved online it is moved there too.
+    async setProject(id) {
+      chatProject = id || null; saveLocal();
+      if (user && savedChats.some((c) => c.id === chatId)) {
+        const r = await api("/api/chats/" + chatId, "PATCH", { project_id: chatProject });
+        if (!r.ok) { alert(r.data.error || "Could not move this chat."); const g = await api("/api/chats/" + chatId); chatProject = g.ok ? g.data.project_id || null : null; saveLocal(); }
+        loadList();
+      }
+      notify();
+    },
+    startChat(mode, projectId) {
+      if (mode && [...modeSel.options].some((o) => o.value === mode)) {
+        modeSel.value = mode; const p = readPrefs(); p.mode = mode; writePrefs(p); updatePlaceholder();
+      }
+      newChat();
+      if (projectId) { chatProject = projectId; saveLocal(); notify(); }
+    },
+    openSaved, newChat,
+    showChat() { scrollDown(true); input.focus(); },
+  };
+  start().then(notify);
 })();
