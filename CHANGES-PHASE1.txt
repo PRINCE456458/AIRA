@@ -1,0 +1,16 @@
+PHASE 1 - Dashboard (sidebar, Home, Help). Chat, login, saved chats, feedback, builder, search and photos are unchanged.
+
+FILES CHANGED / NEW (upload these to GitHub, replacing the old ones):
+  app.py                       - ONE new route only: GET /api/usage (read-only "messages left today"). Nothing else touched.
+  pages/index.html             - new dashboard layout (sidebar, top bar, Home, Chat, Help views). All old element ids kept.
+  public/static/style.css      - new dashboard styles added at the end.
+  public/static/app.js         - small hooks only (window.AiraApp + an "aira:update" event). Chat logic unchanged.
+  public/static/dashboard.js   - NEW: menu, page switching (#/home, #/chat, #/help), Home and Help pages.
+
+DATABASE: no changes. No new tables.
+NEW ENVIRONMENT VARIABLES: none.
+
+IN THE MENU: Home, AI Chat and Help & Support work. The other sections are shown greyed out with a "Soon" label and cannot be clicked.
+They will be switched on one at a time, only when they really work.
+
+AFTER YOU UPLOAD: Vercel redeploys by itself. Open YOUR-LINK/status (should still be all OK), then YOUR-LINK.

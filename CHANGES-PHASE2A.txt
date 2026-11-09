@@ -1,0 +1,57 @@
+AIRA - PHASE 2A: PROJECTS  (no embeddings, no RAG, no new services)
+====================================================================
+
+WHAT YOU CAN DO NOW
+- Create, rename and delete projects (menu: Projects).
+- Give each project custom instructions. Aira follows them in every chat of that project.
+- Keep chats organised per project. Open a project to see its chats.
+- Move an existing chat into a project (or out) with the "Project" box above the chat.
+- Everything is saved in your Turso database, and each account only ever sees its own projects.
+- You must be logged in. Guests are asked to log in.
+
+FILES CHANGED  (replace these in your GitHub repo)
+  app.py                      backend: projects table, project routes, instructions in the AI prompt
+  pages/index.html            Projects menu item, Projects page, create/edit window, project box in chat
+  public/static/app.js        chat remembers its project; sends it to the server; move support
+  public/static/dashboard.js  routing for #/projects, Projects removed from "Coming soon"
+  public/static/style.css     a few styles added at the end
+  public/static/projects.js   NEW - the Projects page
+  .env.example                optional MAX_PROJECTS
+  CHANGES-PHASE2A.txt         this file
+Not changed: dbx.py, requirements.txt, privacy page, logo/images, other files.
+
+DATABASE CHANGES  (done automatically when the site starts, nothing to run by hand)
+  1. New table  projects (id, user_id, name, instructions, created, updated)
+  2. New column chats.project_id  (empty for all your old chats)
+  Old chats are kept exactly as they were. The upgrade is safe to run again.
+
+NEW SETTING (optional)
+  MAX_PROJECTS  = projects allowed per account, default 10
+
+NEW API  (all need login; every query is filtered by your user id)
+  GET/POST /api/projects         GET/PATCH/DELETE /api/projects/<id>
+  PATCH /api/chats/<id>          body {"project_id": "<id>"} or {"project_id": null}
+  Existing APIs only gained an optional project_id field. Nothing was removed.
+  Deleting a project does NOT delete its chats; they just leave the project.
+  Deleting your account also deletes your projects.
+
+SECURITY
+  - Another person's project id gives "not found", never their data (tested).
+  - You cannot save, move or chat into a project that is not yours.
+  - A refused project request does not use up a daily message.
+  - Instructions are limited to 2000 characters, names to 60.
+
+HOW IT WAS TESTED
+  - 60 new backend checks (validation, limit, isolation between two users, move/delete rules,
+    instructions reaching the AI, account deletion, upgrading an OLD database) - run on local
+    SQLite AND on a Turso-protocol server.
+  - The 49 older checks (login, chat, limits, saved chats, usage...) - still all pass, both modes.
+  - Browser tests on desktop, tablet and phone: full project flow, plus the old chat/photo/search/
+    builder/preview and dashboard tests - no console errors, no sideways scrolling.
+  Not tested: your real Vercel + real Turso (I cannot reach them). Check after deploying, see below.
+
+AFTER YOU DEPLOY, CHECK
+  1. Log in -> Projects -> New project (add an instruction) -> New chat in this project.
+  2. Ask something; the answer should follow your instruction.
+  3. Open https://<your-site>/status - it should still say database OK.
+  4. Old chats still open. If anything fails, send me the /status text.

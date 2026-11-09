@@ -69,6 +69,8 @@ SEARCH_PROMPT = (
 )
 EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{2,}$")
 CHAT_ID_RE = re.compile(r"^[a-f0-9]{8,32}$")
+PROJECT_ID_RE = re.compile(r"^[a-f0-9]{16}$")
+MAX_INSTRUCTIONS = 2000
 SESSION_DAYS = 30
 
 
@@ -127,6 +129,7 @@ class Config:
         self.images_per_day = _int("IMAGES_PER_DAY", 10)
         self.max_image_bytes = _int("MAX_IMAGE_BYTES", 1500000)
         self.max_chats = _int("MAX_SAVED_CHATS", 50)
+        self.max_projects = _int("MAX_PROJECTS", 10)
 
 
 CFG = Config()
@@ -176,7 +179,9 @@ def init_db():
          "kind TEXT, rating INTEGER, text TEXT, contact TEXT)", ()),
         ("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, pw TEXT, created TEXT)", ()),
         ("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER, expires REAL)", ()),
-        ("CREATE TABLE IF NOT EXISTS chats (id TEXT PRIMARY KEY, user_id INTEGER, title TEXT, mode TEXT, updated REAL, messages TEXT)", ()),
+        ("CREATE TABLE IF NOT EXISTS chats (id TEXT PRIMARY KEY, user_id INTEGER, title TEXT, mode TEXT, updated REAL, messages TEXT, project_id TEXT)", ()),
+        ("CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, user_id INTEGER, name TEXT, instructions TEXT, created REAL, updated REAL)", ()),
+        ("CREATE INDEX IF NOT EXISTS projects_user ON projects (user_id, updated)", ()),
         ("CREATE INDEX IF NOT EXISTS chats_user ON chats (user_id, updated)", ()),
         ("CREATE TABLE IF NOT EXISTS previews (id TEXT PRIMARY KEY, created REAL, html TEXT)", ()),
         ("CREATE TABLE IF NOT EXISTS hits (key TEXT, ts REAL)", ()),
@@ -189,6 +194,11 @@ def init_db():
     ]
     with db() as conn:
         batch(conn, statements)
+        # Older databases have a chats table without project_id. Add the column once, never twice.
+        columns = [row[1] for row in conn.execute("PRAGMA table_info(chats)").fetchall()]
+        if "project_id" not in columns:
+            conn.execute("ALTER TABLE chats ADD COLUMN project_id TEXT")
+        conn.execute("CREATE INDEX IF NOT EXISTS chats_project ON chats (user_id, project_id)")
 
 
 def salt():
@@ -381,6 +391,16 @@ def chat():
     use_search = bool(data.get("search")) and search_available()
 
     user = current_user()
+    project = None
+    project_id = data.get("project_id")
+    if project_id:
+        if not (user and isinstance(project_id, str) and PROJECT_ID_RE.match(project_id)):
+            return jsonify(error="That project could not be found."), 404
+        with db() as conn:
+            project = conn.execute("SELECT name, instructions FROM projects WHERE id = ? AND user_id = ?",
+                                   (project_id, user[0])).fetchone()
+        if not project:
+            return jsonify(error="That project no longer exists. Start a normal chat or pick another project."), 404
     who = f"u{user[0]}" if user else who_is()
     allowed, reason, left = reserve(who, CFG.user_per_day if user else CFG.per_day)
     if not allowed:
@@ -393,6 +413,10 @@ def chat():
 
     question = messages[-1]["content"] or "Describe this picture."
     system = SYSTEM_PROMPT + (" " + mode["extra"] if mode["extra"] else "")
+    if project and (project[1] or "").strip():
+        system += ("\n\nThe user is working in a project called \"" + project[0] + "\". "
+                   "Follow these project instructions from the user in every answer, unless they ask for something harmful:\n"
+                   + project[1].strip())
     model = CFG.model
     if image:
         system += " " + IMAGE_PROMPT
@@ -576,6 +600,7 @@ def delete_account():
         if not row or not isinstance(password, str) or not check_password(password, row[0]):
             return jsonify(error="Wrong password."), 400
         conn.execute("DELETE FROM chats WHERE user_id = ?", (user[0],))
+        conn.execute("DELETE FROM projects WHERE user_id = ?", (user[0],))
         conn.execute("DELETE FROM sessions WHERE user_id = ?", (user[0],))
         conn.execute("DELETE FROM users WHERE id = ?", (user[0],))
     response = jsonify(ok=True)
@@ -597,9 +622,9 @@ def list_chats():
     if bad:
         return bad
     with db() as conn:
-        rows = conn.execute("SELECT id, title, mode, updated FROM chats WHERE user_id = ? ORDER BY updated DESC LIMIT 100",
+        rows = conn.execute("SELECT id, title, mode, updated, project_id FROM chats WHERE user_id = ? ORDER BY updated DESC LIMIT 100",
                             (user[0],)).fetchall()
-    return jsonify(chats=[{"id": r[0], "title": r[1], "mode": r[2], "updated": r[3]} for r in rows])
+    return jsonify(chats=[{"id": r[0], "title": r[1], "mode": r[2], "updated": r[3], "project_id": r[4]} for r in rows])
 
 
 @app.get("/api/chats/<chat_id>")
@@ -608,10 +633,10 @@ def get_chat(chat_id):
     if bad:
         return bad
     with db() as conn:
-        row = conn.execute("SELECT title, mode, messages FROM chats WHERE id = ? AND user_id = ?", (chat_id, user[0])).fetchone()
+        row = conn.execute("SELECT title, mode, messages, project_id FROM chats WHERE id = ? AND user_id = ?", (chat_id, user[0])).fetchone()
     if not row:
         return jsonify(error="Chat not found."), 404
-    return jsonify(title=row[0], mode=row[1], messages=json.loads(row[2]))
+    return jsonify(title=row[0], mode=row[1], messages=json.loads(row[2]), project_id=row[3])
 
 
 @app.put("/api/chats/<chat_id>")
@@ -635,7 +660,12 @@ def save_chat(chat_id):
         return jsonify(error="This chat is too long to save. Start a new chat."), 400
     title = " ".join(str(data.get("title", "New chat")).split())[:60] or "New chat"
     mode = data.get("mode") if data.get("mode") in MODES else "aira"
+    project_id = data.get("project_id")
+    if project_id is not None and not (isinstance(project_id, str) and PROJECT_ID_RE.match(project_id)):
+        return jsonify(error="Project not found."), 404
     with db() as conn:
+        if project_id and not conn.execute("SELECT 1 FROM projects WHERE id = ? AND user_id = ?", (project_id, user[0])).fetchone():
+            return jsonify(error="Project not found."), 404
         owner = conn.execute("SELECT user_id FROM chats WHERE id = ?", (chat_id,)).fetchone()
         if owner and owner[0] != user[0]:
             return jsonify(error="Could not save this chat."), 404
@@ -644,9 +674,10 @@ def save_chat(chat_id):
             if count >= CFG.max_chats:
                 return jsonify(error=f"You can save {CFG.max_chats} chats. Delete an old one first."), 400
         conn.execute(
-            "INSERT INTO chats VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET "
-            "title = excluded.title, mode = excluded.mode, updated = excluded.updated, messages = excluded.messages",
-            (chat_id, user[0], title, mode, time.time(), blob),
+            "INSERT INTO chats (id, user_id, title, mode, updated, messages, project_id) VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(id) DO UPDATE SET title = excluded.title, mode = excluded.mode, "
+            "updated = excluded.updated, messages = excluded.messages",
+            (chat_id, user[0], title, mode, time.time(), blob, project_id),
         )
     return jsonify(ok=True)
 
@@ -658,6 +689,151 @@ def delete_chat(chat_id):
         return bad
     with db() as conn:
         conn.execute("DELETE FROM chats WHERE id = ? AND user_id = ?", (chat_id, user[0]))
+    return jsonify(ok=True)
+
+
+# ---------------- projects (logged-in people only; every query checks user_id) ----------------
+def clean_project_fields(data, need_name):
+    """Validate name and instructions. Returns (fields_dict, error_text)."""
+    if not isinstance(data, dict):
+        return None, "Please fill in the project name."
+    fields = {}
+    if "name" in data or need_name:
+        name = data.get("name")
+        if not isinstance(name, str) or not name.strip():
+            return None, "Please type a project name."
+        name = " ".join(name.split())
+        if len(name) > 60:
+            return None, "The project name must be 60 characters or fewer."
+        fields["name"] = name
+    if "instructions" in data:
+        text = data.get("instructions")
+        if text is None:
+            text = ""
+        if not isinstance(text, str):
+            return None, "The instructions must be text."
+        text = text.strip()
+        if len(text) > MAX_INSTRUCTIONS:
+            return None, f"The instructions must be {MAX_INSTRUCTIONS} characters or fewer."
+        fields["instructions"] = text
+    return fields, ""
+
+
+def project_json(row, chats=None):
+    item = {"id": row[0], "name": row[1], "instructions": row[2] or "", "created": row[3], "updated": row[4]}
+    if chats is not None:
+        item["chats"] = chats
+    return item
+
+
+def owned_project(conn, user_id, project_id):
+    if not isinstance(project_id, str) or not PROJECT_ID_RE.match(project_id):
+        return None
+    return conn.execute("SELECT id, name, instructions, created, updated FROM projects WHERE id = ? AND user_id = ?",
+                        (project_id, user_id)).fetchone()
+
+
+@app.get("/api/projects")
+def list_projects():
+    user, bad = login_needed()
+    if bad:
+        return bad
+    with db() as conn:
+        rows = conn.execute("SELECT id, name, instructions, created, updated FROM projects WHERE user_id = ? "
+                            "ORDER BY updated DESC", (user[0],)).fetchall()
+        counts = dict(conn.execute("SELECT project_id, COUNT(*) FROM chats WHERE user_id = ? AND project_id IS NOT NULL "
+                                   "GROUP BY project_id", (user[0],)).fetchall())
+    return jsonify(projects=[project_json(r, counts.get(r[0], 0)) for r in rows], max=CFG.max_projects)
+
+
+@app.post("/api/projects")
+def create_project():
+    user, bad = login_needed()
+    if bad:
+        return bad
+    fields, problem = clean_project_fields(request.get_json(silent=True), need_name=True)
+    if problem:
+        return jsonify(error=problem), 400
+    if too_many("newproject:" + str(user[0]), 30, 3600):
+        return jsonify(error="Too many projects created. Please try later."), 429
+    now = time.time()
+    with db() as conn:
+        count = conn.execute("SELECT COUNT(*) FROM projects WHERE user_id = ?", (user[0],)).fetchone()[0]
+        if count >= CFG.max_projects:
+            return jsonify(error=f"You can have {CFG.max_projects} projects. Delete one first."), 400
+        project_id = secrets.token_hex(8)
+        conn.execute("INSERT INTO projects (id, user_id, name, instructions, created, updated) VALUES (?, ?, ?, ?, ?, ?)",
+                     (project_id, user[0], fields["name"], fields.get("instructions", ""), now, now))
+    return jsonify(project=project_json((project_id, fields["name"], fields.get("instructions", ""), now, now), 0)), 201
+
+
+@app.get("/api/projects/<project_id>")
+def get_project(project_id):
+    user, bad = login_needed()
+    if bad:
+        return bad
+    with db() as conn:
+        row = owned_project(conn, user[0], project_id)
+        if not row:
+            return jsonify(error="Project not found."), 404
+        chats = conn.execute("SELECT id, title, mode, updated FROM chats WHERE user_id = ? AND project_id = ? "
+                             "ORDER BY updated DESC LIMIT 100", (user[0], project_id)).fetchall()
+    return jsonify(project=project_json(row, len(chats)),
+                   chats=[{"id": c[0], "title": c[1], "mode": c[2], "updated": c[3]} for c in chats])
+
+
+@app.patch("/api/projects/<project_id>")
+def update_project(project_id):
+    user, bad = login_needed()
+    if bad:
+        return bad
+    fields, problem = clean_project_fields(request.get_json(silent=True), need_name=False)
+    if problem:
+        return jsonify(error=problem), 400
+    if not fields:
+        return jsonify(error="Nothing to change."), 400
+    with db() as conn:
+        if not owned_project(conn, user[0], project_id):
+            return jsonify(error="Project not found."), 404
+        sets = ", ".join(f"{key} = ?" for key in fields)
+        conn.execute(f"UPDATE projects SET {sets}, updated = ? WHERE id = ? AND user_id = ?",
+                     (*fields.values(), time.time(), project_id, user[0]))
+        row = owned_project(conn, user[0], project_id)
+    return jsonify(project=project_json(row))
+
+
+@app.delete("/api/projects/<project_id>")
+def delete_project(project_id):
+    """Deletes the project only. Its chats are kept and simply stop belonging to a project."""
+    user, bad = login_needed()
+    if bad:
+        return bad
+    with db() as conn:
+        if not owned_project(conn, user[0], project_id):
+            return jsonify(error="Project not found."), 404
+        conn.execute("UPDATE chats SET project_id = NULL WHERE user_id = ? AND project_id = ?", (user[0], project_id))
+        conn.execute("DELETE FROM projects WHERE id = ? AND user_id = ?", (project_id, user[0]))
+    return jsonify(ok=True)
+
+
+@app.patch("/api/chats/<chat_id>")
+def move_chat(chat_id):
+    """Move a saved chat into one of your projects, or out of its project (project_id = null)."""
+    user, bad = login_needed()
+    if bad:
+        return bad
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or "project_id" not in data:
+        return jsonify(error="Please choose a project."), 400
+    project_id = data["project_id"]
+    with db() as conn:
+        if not conn.execute("SELECT 1 FROM chats WHERE id = ? AND user_id = ?", (chat_id, user[0])).fetchone():
+            return jsonify(error="Chat not found."), 404
+        if project_id is not None and not owned_project(conn, user[0], project_id):
+            return jsonify(error="Project not found."), 404
+        conn.execute("UPDATE chats SET project_id = ? WHERE id = ? AND user_id = ?", (project_id, chat_id, user[0]))
+        if project_id:
+            conn.execute("UPDATE projects SET updated = ? WHERE id = ? AND user_id = ?", (time.time(), project_id, user[0]))
     return jsonify(ok=True)
 
 
@@ -767,12 +943,24 @@ def admin():
 
 
 # ---------------- pages ----------------
+@app.get("/api/usage")
+def usage_today():
+    """How many free messages the person has left today. Reads only, never counts anything."""
+    user = current_user()
+    who = f"u{user[0]}" if user else who_is()
+    limit = CFG.user_per_day if user else CFG.per_day
+    with db() as conn:
+        row = conn.execute("SELECT count FROM usage WHERE day = ? AND who = ?", (today(), who)).fetchone()
+    used = row[0] if row else 0
+    return jsonify(used=used, limit=limit, left=max(limit - used, 0), loggedIn=bool(user))
+
+
 @app.get("/api/config")
 def public_config():
     whatsapp = f"https://wa.me/{CFG.whatsapp}" if CFG.whatsapp else ""
     modes = [{"id": k, "label": v["label"]} for k, v in MODES.items()]
     return jsonify(name=CFG.site_name, instagram=CFG.instagram, whatsapp=whatsapp, perDay=CFG.per_day,
-                   userPerDay=CFG.user_per_day, modes=modes,
+                   userPerDay=CFG.user_per_day, maxProjects=CFG.max_projects, modes=modes,
                    features={"search": search_available(), "image": bool(CFG.vision_model)})
 
 
