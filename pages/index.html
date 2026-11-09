@@ -25,24 +25,161 @@
   <p id="drawerGuest" class="muted">Log in to save your chats online and open them on any device.</p>
   <ul id="chatList" class="chatlist"></ul>
 </aside>
-<div class="app">
-  <header class="top">
-    <button id="menuBtn" class="ghost icon" type="button" aria-label="Saved chats">&#9776;</button>
-    <div class="brand">
-      <img class="logoimg" src="static/logo.svg" alt="" width="36" height="36">
-      <div>
-        <h1>Aira</h1>
-        <p class="tag">Free AI assistant</p>
-      </div>
-    </div>
-    <div class="actions">
-      <button id="newChat" class="ghost" type="button">New</button>
-      <button id="openFeedback" class="ghost" type="button">Feedback</button>
-      <button id="accountBtn" class="ghost" type="button">Log in</button>
-    </div>
-  </header>
+<svg class="sprite" width="0" height="0" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zM16 14h.01"/></symbol>
+    <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V4a3 3 0 0 0-3 0zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/></symbol>
+    <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2L10 21h4l.6-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-chevrons" viewBox="0 0 24 24"><path d="M11 7l-5 5 5 5M18 7l-5 5 5 5"/></symbol>
+  </defs>
+</svg>
 
-  <main id="chat" class="chat" aria-live="polite">
+<div id="sideScrim" class="scrim" hidden></div>
+<div class="shell" id="shell">
+  <aside id="sidebar" class="sidebar" aria-label="Main menu">
+    <div class="side-brand">
+      <img class="logoimg" src="static/logo.svg" alt="" width="36" height="36">
+      <div class="side-text"><strong>Aira AI</strong><span class="tag">Your Personal AI</span></div>
+    </div>
+    <nav class="side-nav" aria-label="Sections">
+      <a class="nav-item" href="#/home" data-view="home"><svg class="ic"><use href="#i-home"/></svg><span class="side-text">Home</span></a>
+      <a class="nav-item" href="#/chat" data-view="chat"><svg class="ic"><use href="#i-chat"/></svg><span class="side-text">AI Chat</span></a>
+      <a class="nav-item" href="#/projects" data-view="projects"><svg class="ic"><use href="#i-folder"/></svg><span class="side-text">Projects</span></a>
+      <a class="nav-item" href="#/help" data-view="help"><svg class="ic"><use href="#i-help"/></svg><span class="side-text">Help &amp; Support</span></a>
+      <p class="side-label side-text">Coming soon</p>
+      <div id="soonNav"></div>
+    </nav>
+    <div class="side-foot">
+      <button id="collapseBtn" class="ghost side-collapse" type="button" aria-label="Shrink or expand the menu"><svg class="ic"><use href="#i-chevrons"/></svg><span class="side-text">Shrink menu</span></button>
+      <a class="side-link side-text" href="/privacy">Privacy</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button id="sideBtn" class="ghost icon sidebtn" type="button" aria-label="Open menu"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <h1 id="viewTitle" class="view-title">Home</h1>
+      <div class="actions">
+        <button id="openFeedback" class="ghost" type="button">Feedback</button>
+        <button id="accountBtn" class="ghost" type="button">Log in</button>
+      </div>
+    </header>
+
+    <section id="view-home" class="view page-wrap" hidden aria-label="Home">
+      <div class="hero-card">
+        <img class="hero-mini" src="static/logo.svg" alt="" width="72" height="72">
+        <div class="hero-copy">
+          <p class="sub">Think &middot; Ask &middot; Create &middot; Explore</p>
+          <h2 id="homeHello">Welcome to Aira</h2>
+          <p class="muted">Your Personal AI. Pick a mode to start.</p>
+        </div>
+        <a class="primary linkbtn" href="#/chat" id="homeStart">Start chatting</a>
+      </div>
+      <h3 class="sec">Start with a mode</h3>
+      <div id="modeCards" class="cards"></div>
+      <div class="grid2">
+        <div class="card">
+          <h3>Today</h3>
+          <p id="usageText" class="big">&nbsp;</p>
+          <div class="bar" role="progressbar" aria-label="Messages used today" aria-valuemin="0" aria-valuemax="100" id="usageBarWrap"><span id="usageBar"></span></div>
+          <p id="usageNote" class="muted small"></p>
+        </div>
+        <div class="card">
+          <h3>Your chats</h3>
+          <ul id="recentList" class="recent"></ul>
+          <p id="recentEmpty" class="muted"></p>
+          <button id="homeLogin" class="ghost" type="button" hidden>Log in to save your chats</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>What is switched on</h3>
+        <ul id="capList" class="caps"></ul>
+      </div>
+      <div class="card">
+        <h3>Coming soon</h3>
+        <p class="muted small">These are built one at a time. Each one appears in the menu only when it really works.</p>
+        <div id="soonList" class="chiprow"></div>
+      </div>
+    </section>
+
+    <section id="view-projects" class="view page-wrap" hidden aria-label="Projects">
+      <div id="projList">
+        <div class="card head">
+          <div>
+            <h3>Your projects</h3>
+            <p class="muted small">A project keeps related chats together and gives Aira standing instructions, such as &quot;answer in Hinglish&quot;.</p>
+          </div>
+          <button id="projNew" class="primary" type="button">New project</button>
+        </div>
+        <p id="projGuest" class="card muted" hidden>Log in to create projects. Projects are saved to your account.</p>
+        <p id="projEmpty" class="muted" hidden>You have no projects yet. Press <b>New project</b> to make your first one.</p>
+        <div id="projCards" class="cards"></div>
+        <p id="projLimit" class="muted small"></p>
+      </div>
+      <div id="projDetail" hidden>
+        <p><a href="#/projects" class="back">&larr; All projects</a></p>
+        <div class="card">
+          <h3 id="pdName"></h3>
+          <p class="muted small">Instructions Aira follows in every chat of this project</p>
+          <p id="pdInstr" class="instr"></p>
+          <div class="row left">
+            <button id="pdChat" class="primary" type="button">New chat in this project</button>
+            <button id="pdEdit" class="ghost" type="button">Edit</button>
+            <button id="pdDelete" class="ghost danger" type="button">Delete project</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Chats in this project</h3>
+          <ul id="pdChats" class="recent"></ul>
+          <p id="pdEmpty" class="muted" hidden>No chats here yet. Start one above, or use the project menu in AI Chat to move an existing chat in.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-help" class="view page-wrap" hidden aria-label="Help and support">
+      <div class="card">
+        <h3>Need help?</h3>
+        <p class="muted">Read the answers below. If you are still stuck, send feedback and the owner will read it.</p>
+        <div class="row left">
+          <button id="helpFeedback" class="primary" type="button">Send feedback</button>
+          <a id="helpWhatsapp" class="ghost linkbtn" href="#" target="_blank" rel="noopener noreferrer" hidden>WhatsApp</a>
+          <a id="helpInsta" class="ghost linkbtn" href="#" target="_blank" rel="noopener noreferrer" hidden>Instagram</a>
+        </div>
+      </div>
+      <div class="card faq">
+        <h3>Questions people ask</h3>
+        <details><summary>Is Aira free?</summary><p>Yes. To keep it free for everyone, each person has a daily message limit. You can see how many you have left on the Home page.</p></details>
+        <details><summary>Are my chats saved?</summary><p>If you are not logged in, your chat stays only in this browser. If you create an account, your chats are saved online and you can open them from any device.</p></details>
+        <details><summary>I forgot my password.</summary><p>There is no reset by email yet. Send feedback and say which email you used, and the owner can set a new password for you.</p></details>
+        <details><summary>How do I make a website?</summary><p>Open AI Chat, choose the <b>Website builder</b> mode, and describe the site. When Aira writes the code, press <b>Preview</b> to see it or <b>Download</b> to save the file.</p></details>
+        <details><summary>Aira said something wrong.</summary><p>Aira is an AI and can make mistakes. Check important facts, and do not rely on it for medical, legal or money decisions.</p></details>
+        <details><summary>How do I delete my data?</summary><p>Log in, press <b>Account</b>, and choose <b>Delete account</b>. This erases your account and all saved chats.</p></details>
+      </div>
+      <div class="card"><h3>Privacy</h3><p class="muted">Read how your information is handled on the <a href="/privacy">privacy page</a>.</p></div>
+    </section>
+
+    <section id="view-chat" class="view chatview" aria-label="AI Chat">
+      <div class="chatbar">
+        <button id="menuBtn" class="ghost" type="button" aria-label="Saved chats">Chats</button>
+        <button id="newChat" class="ghost" type="button">New chat</button>
+        <label class="projpick" id="projPick" hidden><span class="muted small">Project</span>
+          <select id="projectSel" aria-label="Project for this chat"><option value="">No project</option></select>
+        </label>
+      </div>
+<main id="chat" class="chat" aria-live="polite">
     <section id="welcome" class="welcome hero">
       <img class="hero-logo" src="static/logo.svg" alt="Aira logo" width="104" height="104">
       <h2>Aira AI</h2>
@@ -83,7 +220,9 @@
       <a href="/privacy">Privacy</a>
       <a id="instaLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Instagram</a>
     </p>
-  </footer>
+    </footer>
+    </section>
+  </div>
 </div>
 
 <dialog id="feedbackDialog" class="dialog">
@@ -112,6 +251,21 @@
     </div>
   </form>
 </dialog>
+<dialog id="projectDialog" class="dialog">
+  <form id="projectForm" method="dialog">
+    <h3 id="projectTitle">New project</h3>
+    <label for="projName">Name</label>
+    <input id="projName" type="text" maxlength="60" required>
+    <label for="projInstr">Instructions for Aira (optional)</label>
+    <textarea id="projInstr" rows="5" maxlength="2000" placeholder="Example: Explain like I am a first-year student. Always give one practice question."></textarea>
+    <p id="projStatus" class="status" role="status"></p>
+    <div class="row">
+      <button type="button" id="projCancel" class="ghost">Cancel</button>
+      <button type="submit" id="projSave" class="primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="authDialog" class="dialog">
   <form id="authForm" method="dialog">
     <h3 id="authTitle">Log in</h3>
@@ -149,5 +303,7 @@
   <div id="pvHolder" class="pvholder"></div>
 </dialog>
 <script src="static/app.js"></script>
+<script src="static/dashboard.js"></script>
+<script src="static/projects.js"></script>
 </body>
 </html>
