@@ -1,0 +1,97 @@
+AIRA - PHASE 3: EVERY "COMING SOON" ITEM IS NOW A REAL FEATURE
+==============================================================
+The "Coming soon" list is gone. Every menu item opens a working page connected to the backend
+and (for logged-in users) saved in your Turso database. Guests can use chat, Voice, Toolbox, Pro
+and Help; the rest ask you to log in because they save data to an account.
+
+WHAT IS NEW
+  Writing Studio   blog, article, email, social caption, rewrite, summarise, grammar fix, improve;
+                   tones and length; results copy / download / save to Library
+  Research         web search + AI summary + numbered source links; history kept.
+                   If search is off or finds nothing you get a clear message, never an invented answer.
+  PDF & Notes      upload PDF / TXT / MD / DOCX (max 3 MB, 10 documents per account), summarise,
+                   notes, key points, ask questions (the relevant part of the document is used)
+  Image Studio     text-to-image through YOUR image API (see setup). Preview, download, history.
+                   If the API is not set up or fails you see that - a picture is never faked.
+  Voice Studio     speak to type (dictation) and read text aloud, using the browser's own voice features
+  Library          everything you saved: writing, research, notes, images; search, filter, download, delete
+  Study Planner    subjects + exam date + hours per day -> day-by-day plan; added to Tasks; AI tips
+  Tasks            add, edit, tick off, priority, due date, clear finished
+  Reminders        date + time; alert while Aira is open (see limitations)
+  Expenses         add, month filter, totals by category, CSV download
+  Memory           facts Aira should remember about you, on/off switch, used in your chats
+  Toolbox          browser-only tools: word/character counter, text case, CGPA to percentage, password generator,
+                   JSON formatter, focus timer
+  File creator     turn any text into a PDF, DOCX, TXT or MD file (no extra library needed)
+  Settings         display name, default mode, memory switch, download all my data, delete account
+  Pro              honest page: everything is free now; "I am interested" note reaches /admin feedback.
+                   No payment is connected, so nothing can be bought.
+  Chat             "Copy answer" on every reply, search across your saved chats
+  Projects         (Phase 2A) unchanged, still connected to chat
+
+NEW FILES
+  features.py                  all Phase 3 backend routes and tables
+  public/static/kit.js         shared UI helpers
+  public/static/views1.js      Writing, Research, PDF, Image, Library, File creator
+  public/static/views2.js      Voice, Planner, Tasks, Reminders, Expenses, Memory, Toolbox, Settings, Pro
+  vercel.json.example          OPTIONAL, see "If answers time out"
+  CHANGES-PHASE3.txt           this file
+CHANGED FILES
+  app.py, pages/index.html, public/static/app.js, dashboard.js, style.css, requirements.txt, .env.example
+NOT CHANGED: dbx.py, projects.js, privacy.html, images, logo, earlier README files.
+
+DATABASE (automatic at start; old data is kept)
+  New tables: items, docs, tasks, expenses, memories, settings. Nothing is dropped or rewritten.
+  Deleting an account removes the rows of all of these tables.
+
+SETTINGS TO ADD ON VERCEL (Project > Settings > Environment Variables; names only here)
+  Required for everything except Image Studio: nothing new.
+  For Image Studio:  IMAGE_API_BASE_URL   IMAGE_MODEL   IMAGE_API_KEY
+  Optional:          IMAGE_GEN_PER_DAY (default 5)   IMAGE_SIZE
+  requirements.txt now also lists pypdf (reads PDFs). Vercel installs it by itself on the next deploy.
+
+IMAGE API SETUP (you choose the service; I could not check any real one from here)
+  1. Pick a service that offers an OpenAI-style "images/generations" endpoint and has a free or cheap tier
+     (Together AI and OpenAI both do; check their current free limits yourself).
+  2. Put its address up to /v1 in IMAGE_API_BASE_URL, the model name in IMAGE_MODEL, the key in IMAGE_API_KEY.
+  3. Redeploy. Image Studio now shows a Generate button instead of the setup note.
+  Never paste the key in chat or in a file you upload to GitHub.
+
+TESTS RUN (all passed)
+  - 107 new backend checks for Phase 3, on local SQLite AND on a Turso-protocol server
+  - 60 Projects checks (both modes) and 49 older checks (both modes)
+  - 82 browser checks: every menu page, guest gates, every main button, downloads, copy, mobile layout
+  - dashboard / chat / projects browser regressions: no console errors, no sideways scrolling
+  - generated PDF read back with a PDF reader; generated DOCX opened with LibreOffice
+  - isolation: a second account cannot read, change or delete anything of the first (every route)
+  Used fake AI / image / database servers, because I cannot reach your real services from here.
+
+NOT TESTED (cannot be, from my side)
+  - your real Groq, Turso, Vercel and image service; real microphone and speaker (Voice Studio
+    uses the browser; the page, buttons and "not supported" fallback were tested, speech itself was not)
+  - the pypdf library on Vercel (it could not be downloaded here). Without it, simple text PDFs are still
+    read by a built-in fallback, and PDFs it cannot read give an honest message.
+
+KNOWN LIMITATIONS
+  - Reminders alert only while Aira is open in a browser tab (the free host has no background jobs).
+    Browser notifications are used if you allow them.
+  - Scanned PDFs (pictures of text) cannot be read; there is no OCR. Documents max 3 MB, 10 per account.
+  - Long documents: the most relevant part is used for questions, not the whole text (no embeddings).
+  - Generated PDFs support Latin letters (English, Hinglish); Hindi script becomes "?" in PDF/DOCX creator.
+  - Free AI daily limits still apply: writing, research and document questions count as messages.
+  - Pro has no payments. Adding real payments needs a payment provider account (a later phase).
+
+IF ANSWERS TIME OUT ON VERCEL (free plan allows 10 seconds by default)
+  Rename vercel.json.example to vercel.json and upload it to the main folder. It lets a request run up to 60 s.
+  (Keep it out if you do not need it. I could not test this on your Vercel.)
+
+GITHUB - upload / commit
+  1. Open your AIRA repository on github.com > Add file > Upload files.
+  2. Drag the CONTENTS of the unzipped folder (app.py, features.py, pages, public, ...) so they land on the
+     main page, not inside another folder. Say yes to replace existing files. Do NOT upload .env.
+  3. Commit message: "Phase 3: all features" > Commit changes.
+VERCEL
+  1. Vercel > your project > Settings > Environment Variables: add the Image Studio names above if you want it.
+  2. Vercel redeploys automatically after the commit (Deployments tab; wait for "Ready"). If you only
+     added variables, press Redeploy on the latest deployment.
+  3. Open your site /status (database must say OK), then try: Writing Studio, a PDF upload, Tasks.
