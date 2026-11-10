@@ -10,6 +10,7 @@ import binascii
 import getpass
 import hashlib
 import hmac
+import features
 import json
 import os
 import re
@@ -136,7 +137,7 @@ CFG = Config()
 CFG.read()
 
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="/static")
-app.config["MAX_CONTENT_LENGTH"] = 3 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024
 if CFG.trust_proxy:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
@@ -199,6 +200,7 @@ def init_db():
         if "project_id" not in columns:
             conn.execute("ALTER TABLE chats ADD COLUMN project_id TEXT")
         conn.execute("CREATE INDEX IF NOT EXISTS chats_project ON chats (user_id, project_id)")
+        batch(conn, [(sql, ()) for sql in features.SCHEMA])   # Phase 3 tables (library, documents, tasks, expenses, memory, settings)
 
 
 def salt():
@@ -417,6 +419,8 @@ def chat():
         system += ("\n\nThe user is working in a project called \"" + project[0] + "\". "
                    "Follow these project instructions from the user in every answer, unless they ask for something harmful:\n"
                    + project[1].strip())
+    if user:
+        system += features.memory_prompt(user[0])
     model = CFG.model
     if image:
         system += " " + IMAGE_PROMPT
@@ -601,6 +605,8 @@ def delete_account():
             return jsonify(error="Wrong password."), 400
         conn.execute("DELETE FROM chats WHERE user_id = ?", (user[0],))
         conn.execute("DELETE FROM projects WHERE user_id = ?", (user[0],))
+        for table in ("items", "docs", "tasks", "expenses", "memories", "settings"):
+            conn.execute(f"DELETE FROM {table} WHERE user_id = ?", (user[0],))
         conn.execute("DELETE FROM sessions WHERE user_id = ?", (user[0],))
         conn.execute("DELETE FROM users WHERE id = ?", (user[0],))
     response = jsonify(ok=True)
@@ -961,7 +967,8 @@ def public_config():
     modes = [{"id": k, "label": v["label"]} for k, v in MODES.items()]
     return jsonify(name=CFG.site_name, instagram=CFG.instagram, whatsapp=whatsapp, perDay=CFG.per_day,
                    userPerDay=CFG.user_per_day, maxProjects=CFG.max_projects, modes=modes,
-                   features={"search": search_available(), "image": bool(CFG.vision_model)})
+                   features={"search": search_available(), "image": bool(CFG.vision_model),
+                             "imageGen": features.image_configured(), "pdf": features.pdf_library()})
 
 
 @app.get("/")
@@ -1067,6 +1074,8 @@ def safety_headers(response):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
+
+features.register(sys.modules[__name__])
 
 _ready = []
 
