@@ -22,6 +22,7 @@
 <aside id="drawer" class="drawer" aria-label="Saved chats" hidden>
   <div class="drawer-head"><strong>Your chats</strong><button id="drawerClose" class="ghost icon" type="button" aria-label="Close">&times;</button></div>
   <button id="drawerNew" class="primary wide" type="button">+ New chat</button>
+  <input id="chatSearch" class="chatsearch" type="search" placeholder="Search your chats..." maxlength="60" aria-label="Search your chats" hidden>
   <p id="drawerGuest" class="muted">Log in to save your chats online and open them on any device.</p>
   <ul id="chatList" class="chatlist"></ul>
 </aside>
@@ -42,6 +43,8 @@
     <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/></symbol>
     <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2L10 21h4l.6-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></symbol>
     <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19zM14 7l3 3"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
     <symbol id="i-chevrons" viewBox="0 0 24 24"><path d="M11 7l-5 5 5 5M18 7l-5 5 5 5"/></symbol>
   </defs>
@@ -54,14 +57,7 @@
       <img class="logoimg" src="static/logo.svg" alt="" width="36" height="36">
       <div class="side-text"><strong>Aira AI</strong><span class="tag">Your Personal AI</span></div>
     </div>
-    <nav class="side-nav" aria-label="Sections">
-      <a class="nav-item" href="#/home" data-view="home"><svg class="ic"><use href="#i-home"/></svg><span class="side-text">Home</span></a>
-      <a class="nav-item" href="#/chat" data-view="chat"><svg class="ic"><use href="#i-chat"/></svg><span class="side-text">AI Chat</span></a>
-      <a class="nav-item" href="#/projects" data-view="projects"><svg class="ic"><use href="#i-folder"/></svg><span class="side-text">Projects</span></a>
-      <a class="nav-item" href="#/help" data-view="help"><svg class="ic"><use href="#i-help"/></svg><span class="side-text">Help &amp; Support</span></a>
-      <p class="side-label side-text">Coming soon</p>
-      <div id="soonNav"></div>
-    </nav>
+    <nav id="sideNav" class="side-nav" aria-label="Sections"></nav>
     <div class="side-foot">
       <button id="collapseBtn" class="ghost side-collapse" type="button" aria-label="Shrink or expand the menu"><svg class="ic"><use href="#i-chevrons"/></svg><span class="side-text">Shrink menu</span></button>
       <a class="side-link side-text" href="/privacy">Privacy</a>
@@ -109,9 +105,8 @@
         <ul id="capList" class="caps"></ul>
       </div>
       <div class="card">
-        <h3>Coming soon</h3>
-        <p class="muted small">These are built one at a time. Each one appears in the menu only when it really works.</p>
-        <div id="soonList" class="chiprow"></div>
+        <h3>Explore your tools</h3>
+        <div id="toolCards" class="cards"></div>
       </div>
     </section>
 
@@ -303,6 +298,9 @@
   <div id="pvHolder" class="pvholder"></div>
 </dialog>
 <script src="static/app.js"></script>
+<script src="static/kit.js"></script>
+<script src="static/views1.js"></script>
+<script src="static/views2.js"></script>
 <script src="static/dashboard.js"></script>
 <script src="static/projects.js"></script>
 </body>
