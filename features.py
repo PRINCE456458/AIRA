@@ -1032,9 +1032,11 @@ def register(A):
             return jsonify(error="Please add an email or phone number so the owner can reach you."), 400
         if A.too_many("pro:" + A.who_is(), 3, 3600):
             return jsonify(error="You already sent a request. Please try again later."), 429
+        uid, sub, mail, name = A.identity_for(A.current_user())      # who sent it comes from the login session only
         with _db() as conn:
-            conn.execute("INSERT INTO feedback (created, kind, rating, text, contact) VALUES (?, 'pro', 0, ?, ?)",
-                         (datetime.now().strftime("%Y-%m-%d %H:%M"), "Pro interest: " + (note or "(no note)"), contact))
+            conn.execute("INSERT INTO feedback (created, kind, rating, text, contact, user_id, google_sub, email, name) "
+                         "VALUES (?, 'pro', 0, ?, ?, ?, ?, ?, ?)",
+                         (datetime.now().strftime("%Y-%m-%d %H:%M"), "Pro interest: " + (note or "(no note)"), contact, uid, sub, mail, name))
         return jsonify(ok=True)
 
 
