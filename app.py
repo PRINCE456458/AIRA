@@ -10,6 +10,7 @@ import binascii
 import getpass
 import hashlib
 import hmac
+import auth_google
 import features
 import json
 import os
@@ -110,7 +111,6 @@ class Config:
         self.site_name = e("SITE_NAME", "Aira")
         self.instagram = e("INSTAGRAM_URL")
         self.whatsapp = "".join(ch for ch in e("WHATSAPP_NUMBER") if ch.isdigit())
-        self.admin_password = e("ADMIN_PASSWORD")
         on_vercel = bool(os.environ.get("VERCEL"))
         self.db_path = e("DB_PATH", "/tmp/aira.db" if on_vercel else os.path.join(BASE_DIR, "aira.db"))
         self.per_minute = _int("PER_MINUTE", 8)
@@ -170,6 +170,13 @@ def batch(conn, statements):
             conn.execute(sql, params)
 
 
+def add_columns(conn, table, wanted):
+    have = [row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+    for column, kind in wanted.items():
+        if column not in have:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+
+
 def init_db():
     now = time.time()
     cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -200,6 +207,11 @@ def init_db():
         if "project_id" not in columns:
             conn.execute("ALTER TABLE chats ADD COLUMN project_id TEXT")
         conn.execute("CREATE INDEX IF NOT EXISTS chats_project ON chats (user_id, project_id)")
+        # Google sign-in: new columns on old databases. Existing users and feedback are kept as they are.
+        add_columns(conn, "users", {"google_sub": "TEXT", "name": "TEXT", "picture": "TEXT", "last_login": "TEXT", "email_verified": "INTEGER DEFAULT 0"})
+        add_columns(conn, "feedback", {"user_id": "INTEGER", "google_sub": "TEXT", "email": "TEXT", "name": "TEXT", "whatsapp": "TEXT", "consent": "INTEGER DEFAULT 0"})
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_google_sub ON users (google_sub)")
+        conn.execute("CREATE INDEX IF NOT EXISTS feedback_user ON feedback (user_id)")
         batch(conn, [(sql, ()) for sql in features.SCHEMA])   # Phase 3 tables (library, documents, tasks, expenses, memory, settings)
 
 
@@ -540,6 +552,8 @@ def credentials():
 
 @app.post("/api/signup")
 def signup():
+    if not auth_google.password_login_enabled():
+        return jsonify(error="Please use Continue with Google to log in."), 403
     email, password = credentials()
     if email is None or not EMAIL_RE.match(email) or len(email) > 120:
         return jsonify(error="Please enter a valid email."), 400
@@ -559,6 +573,8 @@ def signup():
 
 @app.post("/api/login")
 def login():
+    if not auth_google.password_login_enabled():
+        return jsonify(error="Please use Continue with Google to log in."), 403
     email, password = credentials()
     if not email or not password or len(email) > 120 or len(password) > 100:
         return jsonify(error="Wrong email or password."), 400
@@ -568,7 +584,7 @@ def login():
         row = conn.execute("SELECT id, pw FROM users WHERE email = ?", (email,)).fetchone()
     # run the slow check even when the email is unknown so timing does not reveal accounts
     good = check_password(password, row[1] if row else hash_password("x"))
-    if not row or not good:
+    if not row or not good or not row[1]:      # accounts made with Google have no password at all
         return jsonify(error="Wrong email or password."), 400
     return start_session(jsonify(ok=True, email=email), row[0])
 
@@ -587,7 +603,12 @@ def logout():
 @app.get("/api/me")
 def me():
     user = current_user()
-    return jsonify(email=user[1] if user else None)
+    if not user:
+        return jsonify(email=None)
+    with db() as conn:
+        row = conn.execute("SELECT name, picture, google_sub, pw FROM users WHERE id = ?", (user[0],)).fetchone()
+    return jsonify(email=user[1], name=(row[0] if row else "") or "", picture=(row[1] if row else "") or "",
+                   google=bool(row and row[2]), hasPassword=bool(row and row[3]), admin=auth_google.is_admin(user[0]))
 
 
 @app.post("/api/delete-account")
@@ -595,14 +616,20 @@ def delete_account():
     user = current_user()
     data = request.get_json(silent=True) or {}
     password = data.get("password") if isinstance(data, dict) else ""
+    confirm = data.get("confirm") if isinstance(data, dict) else ""
     if not user:
         return jsonify(error="Please log in first."), 401
     if too_many("delacc:" + str(user[0]), 5, 900):
         return jsonify(error="Too many tries. Please wait a few minutes."), 429
     with db() as conn:
         row = conn.execute("SELECT pw FROM users WHERE id = ?", (user[0],)).fetchone()
-        if not row or not isinstance(password, str) or not check_password(password, row[0]):
+        if row and not row[0]:      # Google account: no password exists, so ask to type the email address
+            if not isinstance(confirm, str) or confirm.strip().lower() != user[1].lower():
+                return jsonify(error="Type your email address exactly to confirm."), 400
+        elif not row or not isinstance(password, str) or not check_password(password, row[0]):
             return jsonify(error="Wrong password."), 400
+        # keep the feedback text for the owner, but remove who wrote it
+        conn.execute("UPDATE feedback SET user_id = NULL, google_sub = NULL, email = NULL, name = NULL, whatsapp = NULL, consent = 0 WHERE user_id = ?", (user[0],))
         conn.execute("DELETE FROM chats WHERE user_id = ?", (user[0],))
         conn.execute("DELETE FROM projects WHERE user_id = ?", (user[0],))
         for table in ("items", "docs", "tasks", "expenses", "memories", "settings"):
@@ -884,6 +911,32 @@ def show_preview(preview_id):
 
 
 # ---------------- feedback ----------------
+PHONE_RE = re.compile(r"^\+[1-9][0-9]{7,14}$")
+
+
+def clean_whatsapp(value):
+    """'+91 98765-43210' -> '+919876543210'. Returns (number, problem). Empty is fine: the number is optional."""
+    raw = str(value or "").strip()
+    if not raw:
+        return "", None
+    number = re.sub(r"[\s\-().]", "", raw)
+    if number.startswith("00"):
+        number = "+" + number[2:]
+    if not PHONE_RE.match(number):
+        return "", "Please write the WhatsApp number with the country code, like +919876543210."
+    return number, None
+
+
+def identity_for(user):
+    """(user_id, google_sub, email, name) for a logged-in person, read from the database, never from the request."""
+    if not user:
+        return None, None, None, None
+    with db() as conn:
+        row = conn.execute("SELECT google_sub, name FROM users WHERE id = ?", (user[0],)).fetchone()
+    name = (row[1] if row and row[1] else user[1].split("@")[0])
+    return user[0], (row[0] if row else None), user[1], name
+
+
 @app.post("/api/feedback")
 def feedback():
     data = request.get_json(silent=True)
@@ -898,23 +951,32 @@ def feedback():
         return jsonify(error="Please pick a type."), 400
     if len(text) < 5:
         return jsonify(error="Please write a few words."), 400
+    user = current_user()
+    # Who sent it comes ONLY from the login session. Any name/email/id in the request is ignored.
+    user_id, google_sub, email, name = identity_for(user)
+    whatsapp, problem = clean_whatsapp(data.get("whatsapp"))
+    if problem:
+        return jsonify(error=problem), 400
+    consent = 0
+    if whatsapp:
+        if not user:
+            return jsonify(error="Please log in to share a WhatsApp number."), 400
+        if data.get("consent") is not True:
+            return jsonify(error="Please tick the box to allow the owner to contact you on WhatsApp."), 400
+        consent = 1
+    if user:
+        contact = ""        # the owner already knows who you are
     if too_many("fb:" + who_is(), 5, 3600):
         return jsonify(error="You sent a lot of feedback already. Please try again later."), 429
     with db() as conn:
         conn.execute(
-            "INSERT INTO feedback (created, kind, rating, text, contact) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO feedback (created, kind, rating, text, contact, user_id, google_sub, email, name, whatsapp, consent) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (datetime.now(timezone(timedelta(hours=CFG.tz_hours))).strftime("%Y-%m-%d %H:%M"),
-             kind, rating, text[:1000], contact),
+             kind, rating, text[:1000], contact, user_id, google_sub, email, name, whatsapp or None, consent),
         )
-    print(f"[feedback] {kind} {rating}/5: {text[:200]}", flush=True)
+    print(f"[feedback] {kind} {rating}/5 from {'a logged-in user' if user else 'a guest'}", flush=True)   # no personal data in logs
     return jsonify(ok=True)
-
-
-def admin_ok():
-    auth = request.authorization
-    if not CFG.admin_password or not auth or not auth.password:
-        return False
-    return hmac.compare_digest(auth.password.encode(), CFG.admin_password.encode())
 
 
 def count_users():
@@ -923,29 +985,96 @@ def count_users():
 
 
 def read_feedback(limit=200):
+    """Plain rows for the command line tool (python app.py feedback)."""
     with db() as conn:
         return conn.execute(
             "SELECT created, kind, rating, text, contact FROM feedback ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()
 
 
+def search_feedback(q="", kind="", only_whatsapp=False, limit=300):
+    sql = ("SELECT id, created, kind, rating, text, contact, user_id, google_sub, email, name, whatsapp FROM feedback")
+    where, params = [], []
+    if q:
+        like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        where.append("(COALESCE(name,'') LIKE ? ESCAPE '\\' OR COALESCE(email,'') LIKE ? ESCAPE '\\' OR COALESCE(whatsapp,'') LIKE ? ESCAPE '\\' "
+                     "OR text LIKE ? ESCAPE '\\' OR COALESCE(contact,'') LIKE ? ESCAPE '\\')")
+        params += [like] * 5
+    if kind in FEEDBACK_TYPES or kind == "pro":
+        where.append("kind = ?")
+        params.append(kind)
+    if only_whatsapp:
+        where.append("whatsapp IS NOT NULL AND whatsapp != ''")
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY id DESC LIMIT ?"
+    with db() as conn:
+        return conn.execute(sql, params + [limit]).fetchall()
+
+
+def admin_gate(as_json):
+    """None when the person is the admin. Otherwise the refusal to send. Only ADMIN_EMAIL (signed in with Google) passes."""
+    user = current_user()
+    if not user:
+        if as_json:
+            return jsonify(error="Please log in first."), 401
+        link = '<p><a href="/auth/google">Continue with Google</a></p>' if auth_google.enabled() else ""
+        return Response("<!doctype html><meta charset=utf-8><title>Aira admin</title><p>Please log in first.</p>" + link, 401, mimetype="text/html")
+    if not auth_google.is_admin(user[0]):
+        return (jsonify(error="Not allowed."), 403) if as_json else Response("<!doctype html><meta charset=utf-8><title>Aira admin</title><p>Not allowed.</p>", 403, mimetype="text/html")
+    return None
+
+
+def feedback_args():
+    return (request.args.get("q", "").strip()[:100], request.args.get("type", "").strip()[:20],
+            request.args.get("wa") == "1")
+
+
+@app.get("/api/admin/feedback")
+def admin_feedback_json():
+    refusal = admin_gate(True)
+    if refusal:
+        return refusal
+    q, kind, wa = feedback_args()
+    rows = search_feedback(q, kind, wa)
+    keys = ("id", "created", "type", "rating", "message", "contact", "user_id", "google_id", "email", "name", "whatsapp")
+    return jsonify(feedback=[dict(zip(keys, r)) for r in rows], accounts=count_users())
+
+
 @app.get("/admin")
 def admin():
-    if not admin_ok():
-        return Response("Login needed.", 401, {"WWW-Authenticate": 'Basic realm="Aira admin"'})
+    refusal = admin_gate(False)
+    if refusal:
+        return refusal
+    q, kind, wa = feedback_args()
+    found = search_feedback(q, kind, wa)
+    options = "".join(f"<option value='{k}'{' selected' if k == kind else ''}>{k or 'All types'}</option>"
+                      for k in [""] + FEEDBACK_TYPES + ["pro"])
     rows = "".join(
-        f"<tr><td>{escape(c)}</td><td>{escape(k)}</td><td>{'&#9733;' * r}</td>"
-        f"<td>{escape(t)}</td><td>{escape(n)}</td></tr>"
-        for c, k, r, t, n in read_feedback()
+        "<tr><td>{when}</td><td>{who}</td><td>{mail}</td><td>{wa}</td><td>{kind} {stars}</td><td>{text}</td></tr>".format(
+            when=escape(c or ""), who=escape(nm or "Guest"), mail=escape(em or ct or "-"),
+            wa=(f"<a href='https://wa.me/{escape(w.lstrip('+'))}'>{escape(w)}</a>" if w else "-"),
+            kind=escape(k or ""), stars="&#9733;" * (r or 0), text=escape(t or ""))
+        for _id, c, k, r, t, ct, _uid, _sub, em, nm, w in found
     )
     page = (
         "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
-        "<title>Aira feedback</title><style>body{font:15px system-ui;margin:20px}table{border-collapse:collapse;width:100%}"
-        "td,th{border:1px solid #ccc;padding:6px 8px;text-align:left;vertical-align:top}th{background:#eee}</style>"
-        f"<h2>Feedback ({len(read_feedback())}) - accounts: {count_users()}</h2><table><tr><th>When</th><th>Type</th><th>Stars</th>"
-        f"<th>Message</th><th>Contact</th></tr>{rows}</table>"
+        "<title>Aira feedback</title><style>body{font:15px system-ui;margin:20px;background:#0d0716;color:#eee}"
+        "table{border-collapse:collapse;width:100%}td,th{border:1px solid #3a2a55;padding:6px 8px;text-align:left;vertical-align:top}"
+        "th{background:#241638}a{color:#c9a0ff}input,select,button{font:inherit;padding:6px 8px;margin-right:6px}"
+        ".wide{overflow-x:auto}</style>"
+        f"<h2>Feedback ({len(found)} shown) &middot; accounts: {count_users()}</h2>"
+        "<form method=get action=/admin>"
+        f"<input name=q value='{escape(q, quote=True)}' placeholder='Search name, email, number, message' maxlength=100>"
+        f"<select name=type>{options}</select>"
+        f"<label><input type=checkbox name=wa value=1{' checked' if wa else ''}> Has WhatsApp number</label> "
+        "<button>Search</button> <a href=/admin>Clear</a></form><br><div class=wide><table>"
+        "<tr><th>When</th><th>Name</th><th>Verified Gmail</th><th>WhatsApp</th><th>Type</th><th>Message</th></tr>"
+        f"{rows}</table></div>"
     )
-    return Response(page, mimetype="text/html")
+    return Response(page, mimetype="text/html", headers={
+        "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'",
+        "Cache-Control": "no-store"})
 
 
 # ---------------- pages ----------------
@@ -967,6 +1096,7 @@ def public_config():
     modes = [{"id": k, "label": v["label"]} for k, v in MODES.items()]
     return jsonify(name=CFG.site_name, instagram=CFG.instagram, whatsapp=whatsapp, perDay=CFG.per_day,
                    userPerDay=CFG.user_per_day, maxProjects=CFG.max_projects, modes=modes,
+                   googleEnabled=auth_google.enabled(), passwordLogin=auth_google.password_login_enabled(),
                    features={"search": search_available(), "image": bool(CFG.vision_model),
                              "imageGen": features.image_configured(), "pdf": features.pdf_library()})
 
@@ -1012,7 +1142,12 @@ def run_status(test_ai):
         add("Database", bool(CFG.turso_url) or not os.environ.get("VERCEL"), mode + " - connected")
     except Exception as error:   # show the reason to the owner
         add("Database", False, mode + " - NOT working: " + str(error)[:220])
-    add("Admin password (ADMIN_PASSWORD)", bool(CFG.admin_password), "set" if CFG.admin_password else "Not set, so /admin is closed")
+    if auth_google.enabled():
+        add("Google login", True, "on. Redirect address: " + auth_google.redirect_uri())
+    else:
+        add("Google login", False, "off. Missing: " + ", ".join(auth_google.missing_settings()) + ". Email+password login stays on until Google is set up.")
+    add("Admin account (ADMIN_EMAIL)", bool(auth_google.admin_email()),
+        "set (the Google account with this email can open /admin)" if auth_google.admin_email() else "Not set, so /admin is closed")
     add("Web search", None, "on" if search_available() else "off (to turn on, add a line  ddgs  to requirements.txt)")
     add("Photos (AI_VISION_MODEL)", None, CFG.vision_model or "off")
     if test_ai:
@@ -1067,7 +1202,7 @@ def health():
 @app.after_request
 def safety_headers(response):
     response.headers.setdefault("Content-Security-Policy", (
-        "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
+        "default-src 'self'; img-src 'self' data: https://*.googleusercontent.com; style-src 'self'; script-src 'self'; "
         "connect-src 'self'; frame-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
     ))
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -1076,6 +1211,7 @@ def safety_headers(response):
 
 
 features.register(sys.modules[__name__])
+auth_google.register(sys.modules[__name__])
 
 _ready = []
 
