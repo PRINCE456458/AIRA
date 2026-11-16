@@ -1,0 +1,91 @@
+AIRA - GOOGLE LOGIN + FEEDBACK IDENTITY + ADMIN DASHBOARD
+==========================================================
+NOTHING IS PUSHED OR DEPLOYED FOR YOU. This ZIP is for you to review first.
+
+WHAT CHANGED
+  1. "Continue with Google" (real OAuth 2.0 / OpenID Connect, authorization-code flow with PKCE)
+     - The server sends people to Google, receives the code back, exchanges it using the client SECRET
+       (kept only on the server), and verifies the ID token itself: RS256 signature against Google's
+       public keys, issuer, audience (your client id), expiry, nonce, and email_verified = true.
+     - Identity is Google's unique "sub" id. A typed email never logs anyone in.
+     - Stored per user: Google id, verified email, name, picture address, registration date, last login.
+     - Session: random token, only its hash is stored; cookie is HttpOnly, SameSite=Lax, Secure on https.
+     - Logout deletes the session on the server. State/nonce/PKCE use a signed 10-minute one-use cookie.
+     - The old typed email + password login turns itself OFF as soon as Google login is configured.
+       Until then it stays on, so you are never locked out while you set Google up.
+     - Old password accounts: when the same person signs in with Google (same verified email) the
+       account is linked: chats, projects and everything else are kept, the old password is erased,
+       and old sessions are ended. Registration date is kept.
+     - Deleting an account: Google accounts confirm by typing their own email address.
+  2. Feedback identity
+     - Logged-in feedback is stamped by the SERVER with Google id, verified Gmail, name, time.
+       Any identity sent by the browser is ignored. Guests can still send anonymous feedback.
+     - Optional WhatsApp number (country code, saved like +919876543210). It needs a consent tick.
+       It is never needed to log in or to use Aira. Google does not give us phone numbers; we only
+       store a number the person types.
+     - Deleting an account removes the sender identity and number from that person's feedback rows.
+  3. Admin feedback page  /admin
+     - Only the Google account whose email equals ADMIN_EMAIL (case-insensitive) can open it.
+       Guests get 401, other users 403. The old ADMIN_PASSWORD page is gone.
+     - Shows name, verified Gmail, WhatsApp, message, date/time. Search (name, email, number,
+       message), filter by type, filter "has WhatsApp". JSON version: /api/admin/feedback.
+  4. Database (automatic, old rows kept)
+     - users: + google_sub, name, picture, last_login, email_verified (unique index on google_sub)
+     - feedback: + user_id, google_sub, email, name, whatsapp, consent
+     Works on local SQLite and on Turso.
+
+FILES
+  NEW      auth_google.py
+  NEW      CHANGES-GOOGLE-LOGIN.txt
+  CHANGED  app.py, features.py, pages/index.html, public/static/app.js, public/static/style.css,
+           .env.example, README.txt, README-VERCEL.txt
+  Not changed: dbx.py, requirements.txt (no new library needed), the Phase 1-3 view files.
+
+STEP 1 - GOOGLE CLOUD CONSOLE  (https://console.cloud.google.com, any Google account)
+  1. Create a project (name: Aira).
+  2. Menu > APIs & Services > OAuth consent screen (may be called "Google Auth Platform"):
+       User type: External.  App name: Aira.  User support email + developer email: yours.
+       Authorized domain: your site's domain. For https://aira-ai-sand.vercel.app Google may not
+       accept "vercel.app" as a domain you own - if it complains, leave it empty (sign-in still works,
+       but the consent page shows no logo/verified branding) or use a custom domain you own.
+       Scopes: openid, email, profile only (these are non-sensitive; no Google review needed).
+  3. IMPORTANT: press "Publish app" (status "In production"). If it stays "Testing", ONLY the
+     test users you list can log in, and "any Google account" will not work.
+  4. APIs & Services > Credentials > Create credentials > OAuth client ID > Web application.
+       Authorized JavaScript origins: not needed for this server-side flow (adding
+       https://aira-ai-sand.vercel.app is harmless).
+       Authorized redirect URI (exact, no trailing slash):
+         https://aira-ai-sand.vercel.app/auth/google/callback
+  5. Copy the Client ID and Client secret. Never paste the secret in chat, GitHub or the website files.
+
+STEP 2 - VERCEL  (Project > Settings > Environment Variables, tick Production)
+  GOOGLE_CLIENT_ID      from step 1
+  GOOGLE_CLIENT_SECRET  from step 1
+  GOOGLE_REDIRECT_URI   https://aira-ai-sand.vercel.app/auth/google/callback  (must match Google EXACTLY)
+  SESSION_SECRET        a long random text. Make one on your laptop:
+                        python -c "import secrets; print(secrets.token_urlsafe(48))"
+  ADMIN_EMAIL           your own Gmail, the one that may open /admin
+  Then Deployments > latest > Redeploy (variables only apply to new deployments).
+  Check https://aira-ai-sand.vercel.app/status : "Google login" must say on.
+
+STEP 3 - YOU UPLOAD (only when you decide to)
+  Upload the CONTENTS of the ZIP to GitHub (replace files, never upload .env), commit, let Vercel redeploy.
+
+REMAINING MANUAL STEPS
+  - Do steps 1 and 2 above, then log in once with your own Google account and open /admin.
+  - Revoke the old Groq key that was pasted in chat earlier, if you have not yet.
+  - Old password users keep their data when they next press Continue with Google.
+
+TESTS
+  - 144 backend checks for this change on local SQLite AND on a Turso-protocol server: typed Gmail
+    cannot log in; forged/tampered/expired/wrong-audience/unverified tokens refused; state and nonce
+    replay refused; session cookie flags; user isolation (projects, chats, tasks, export); feedback
+    identity cannot be forged; WhatsApp optional + consent; admin only for ADMIN_EMAIL; old data
+    migrated; account linking; deletion.
+  - 32 browser checks of the full login/feedback/admin flow (desktop, phone), no console errors.
+  - All earlier suites re-run and passing: 49 core, 60 Projects, 107 Phase 3 (both DB modes), 82 browser
+    Phase 3, dashboard/chat/projects browser tests.
+  IMPORTANT HONESTY NOTE: I cannot sign in to the real Google from here. The tests use a local stand-in
+  for Google's two web addresses with my own signing key; they prove OUR verification code accepts
+  valid tokens and rejects bad ones. They do NOT prove your Google Cloud setup is right. The first real
+  login on your site is the true test: if it fails, send me the message shown on the login window.
