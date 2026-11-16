@@ -237,8 +237,16 @@
     </div>
     <label for="fbText">Your message</label>
     <textarea id="fbText" rows="4" maxlength="1000" placeholder="Tell me what happened or what you want..."></textarea>
-    <label for="fbContact">Email or WhatsApp (optional, only if you want a reply)</label>
-    <input id="fbContact" type="text" maxlength="100" autocomplete="off">
+    <p id="fbWho" class="muted small" hidden></p>
+    <div id="fbGuest">
+      <label for="fbContact">Email (optional, only if you want a reply)</label>
+      <input id="fbContact" type="text" maxlength="100" autocomplete="off">
+    </div>
+    <div id="fbWaBlock" hidden>
+      <label for="fbWhatsapp">WhatsApp number (optional, with country code)</label>
+      <input id="fbWhatsapp" type="tel" maxlength="24" placeholder="+91 98765 43210" autocomplete="tel">
+      <label class="check"><input id="fbConsent" type="checkbox"> <span>I agree that the owner of Aira may contact me on this WhatsApp number about my feedback. I can ask for it to be deleted at any time. You do not need to share a number to use Aira.</span></label>
+    </div>
     <p id="fbStatus" class="status" role="status"></p>
     <div class="row">
       <button type="button" id="fbCancel" class="ghost">Close</button>
@@ -264,12 +272,20 @@
 <dialog id="authDialog" class="dialog">
   <form id="authForm" method="dialog">
     <h3 id="authTitle">Log in</h3>
+    <div id="googleBlock" hidden>
+      <p class="muted small">Log in with your Google account. Aira never sees your Google password.</p>
+      <a id="googleBtn" class="google-btn" href="/auth/google"><svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2045c0-.638-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087c1.7018-1.5668 2.6836-3.874 2.6836-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.4673-.806 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.859-3.0477.859-2.3441 0-4.3282-1.5831-5.0359-3.7104H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z"/><path fill="#FBBC05" d="M3.9641 10.71c-.18-.54-.2823-1.1168-.2823-1.71s.1023-1.17.2823-1.71V4.9582H.9573C.3477 6.1731 0 7.5477 0 9s.3477 2.8268.9573 4.0418L3.9641 10.71z"/><path fill="#EA4335" d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.426 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9582L3.9641 7.29C4.6718 5.1627 6.6559 3.5795 9 3.5795z"/></svg><span>Continue with Google</span></a>
+      <p id="orLine" class="muted small orline" hidden>or use an older email account</p>
+    </div>
+    <p id="authError" class="status bad" role="alert"></p>
+    <div id="passBlock">
     <label for="authEmail">Email</label>
     <input id="authEmail" type="email" maxlength="120" autocomplete="email" required>
     <label for="authPass">Password</label>
     <input id="authPass" type="password" minlength="8" maxlength="100" autocomplete="current-password" required>
     <p class="muted small">There is no password reset by email, so remember your password.</p>
     <p id="authStatus" class="status" role="status"></p>
+    </div>
     <div class="row">
       <button type="button" id="authSwitch" class="ghost">Create account</button>
       <button type="button" id="authCancel" class="ghost">Close</button>
@@ -281,8 +297,12 @@
 <dialog id="accountDialog" class="dialog">
   <form id="accountForm" method="dialog">
     <h3>Your account</h3>
-    <p id="accountEmail" class="muted"></p>
-    <label for="delPass">To delete your account and all saved chats, type your password:</label>
+    <div class="acct">
+      <img id="accountPic" class="avatar" alt="" width="44" height="44" referrerpolicy="no-referrer" hidden>
+      <div><b id="accountName"></b><p id="accountEmail" class="muted"></p></div>
+    </div>
+    <p><a id="adminLink" href="/admin" hidden>Open the feedback page (admin)</a></p>
+    <label id="delLabel" for="delPass">To delete your account and all saved chats, type your password:</label>
     <input id="delPass" type="password" maxlength="100" autocomplete="current-password">
     <p id="accountStatus" class="status" role="status"></p>
     <div class="row">
