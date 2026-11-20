@@ -652,3 +652,99 @@ a.nav-item:hover { background: rgba(116, 75, 225, .12); border-color: rgba(151, 
 @media (prefers-reduced-motion: reduce) {
   .nav-item, .mode-card { transition: none; }
 }
+
+/* AIRA 3D cinematic layer — visual-only, no application logic changes */
+:root { --aira-3d-glow: rgba(139, 83, 255, .42); }
+#welcome {
+  position: relative;
+  isolation: isolate;
+  perspective: 1100px;
+  transform-style: preserve-3d;
+  padding-top: clamp(54px, 8vh, 100px);
+}
+#welcome::before {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  width: clamp(210px, 31vw, 360px);
+  aspect-ratio: 1;
+  top: 5%;
+  left: 50%;
+  transform: translateX(-50%) translateZ(-90px) rotateX(13deg);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.95) 0 1%, rgba(183,145,255,.8) 4%, transparent 13%),
+    radial-gradient(circle at 36% 30%, #a77aff 0, #5423bd 19%, #17102f 48%, #080711 69%);
+  box-shadow: inset -26px -22px 52px rgba(0,0,0,.8), inset 12px 10px 26px rgba(255,255,255,.22), 0 0 48px var(--aira-3d-glow), 0 0 110px rgba(93,48,220,.2);
+  animation: aira-orb-float 8s ease-in-out infinite;
+  pointer-events: none;
+}
+#welcome::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: clamp(300px, 48vw, 570px);
+  height: clamp(82px, 13vw, 145px);
+  top: clamp(118px, 17vh, 205px);
+  left: 50%;
+  transform: translateX(-50%) rotateX(67deg) rotateZ(-9deg) translateZ(-20px);
+  border: 2px solid rgba(171, 125, 255, .8);
+  border-radius: 50%;
+  box-shadow: 0 0 12px #9b69ff, 0 0 34px rgba(133, 74, 255, .6), inset 0 0 18px rgba(133, 74, 255, .3);
+  animation: aira-orbit 16s linear infinite;
+  pointer-events: none;
+}
+#welcome .hero-logo {
+  position: relative;
+  transform: translateZ(65px) rotateY(-8deg);
+  filter: drop-shadow(0 10px 12px rgba(0,0,0,.65)) drop-shadow(0 0 22px rgba(153,105,255,.8));
+  animation: aira-logo-hover 5s ease-in-out infinite;
+}
+#welcome h2 {
+  position: relative;
+  transform: translateZ(42px);
+  color: #f7f2ff;
+  text-shadow: 0 2px 0 #8b65d8, 0 5px 0 rgba(50,29,99,.8), 0 12px 28px rgba(138,88,255,.48);
+  letter-spacing: .04em;
+}
+#welcome .sub { text-shadow: 0 0 18px rgba(163,121,255,.65); }
+#welcome .features { perspective: 900px; }
+#welcome .feature,
+#view-home .mode-card,
+#view-home .card,
+#view-projects .card,
+#view-help .card {
+  transform: translateZ(0) rotateX(0deg);
+  transform-style: preserve-3d;
+  transition: transform .35s ease, box-shadow .35s ease, border-color .35s ease;
+  box-shadow: 0 12px 26px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.06);
+}
+#welcome .feature:hover,
+#view-home .mode-card:hover,
+#view-home .card:hover,
+#view-projects .card:hover,
+#view-help .card:hover {
+  transform: perspective(900px) translateY(-7px) rotateX(5deg) rotateY(-3deg) translateZ(16px);
+  border-color: rgba(174,132,255,.62);
+  box-shadow: 0 24px 42px rgba(0,0,0,.42), 0 0 28px rgba(129,79,255,.2), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.sidebar { box-shadow: 14px 0 38px rgba(0,0,0,.28), inset -1px 0 0 rgba(169,135,255,.12); }
+.topbar { box-shadow: 0 8px 30px rgba(0,0,0,.16); }
+.composer { transform: perspective(900px) translateZ(10px); box-shadow: 0 16px 35px rgba(0,0,0,.28), 0 0 24px rgba(116,74,255,.1); }
+.primary, .send { transform: translateZ(0); transition: transform .2s ease, box-shadow .2s ease, filter .2s ease; }
+.primary:hover, .send:hover { transform: translateY(-3px) translateZ(8px); box-shadow: 0 13px 28px rgba(104,61,236,.5); filter: brightness(1.12); }
+@keyframes aira-orb-float { 0%,100% { translate: 0 0; } 50% { translate: 0 -13px; } }
+@keyframes aira-logo-hover { 0%,100% { transform: translateZ(65px) rotateY(-8deg) translateY(0); } 50% { transform: translateZ(85px) rotateY(8deg) translateY(-7px); } }
+@keyframes aira-orbit { from { rotate: 0deg; } to { rotate: 360deg; } }
+@media (max-width: 700px) {
+  #welcome { padding-top: 44px; }
+  #welcome::before { width: 210px; top: 3%; }
+  #welcome::after { width: 290px; height: 78px; top: 120px; }
+  #welcome .feature:hover, #view-home .mode-card:hover, #view-home .card:hover,
+  #view-projects .card:hover, #view-help .card:hover { transform: translateY(-3px) translateZ(5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #welcome::before, #welcome::after, #welcome .hero-logo { animation: none !important; }
+  #welcome .feature, #view-home .mode-card, #view-home .card,
+  #view-projects .card, #view-help .card, .primary, .send { transition: none !important; }
+}
