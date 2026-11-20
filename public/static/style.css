@@ -422,3 +422,16 @@ a.src { display: block; margin: 4px 0; }
 .nav-item { text-decoration: none; }
 .side-nav { overflow-y: auto; }
 @media (max-width: 520px) { .catline { grid-template-columns: 70px 1fr auto; } .clock { font-size: 44px; } .toasts { left: 16px; } }
+
+/* ---------- Google sign-in, account, feedback identity ---------- */
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; box-sizing: border-box; padding: 11px 14px; margin: 8px 0 4px; border-radius: 12px; background: #fff; color: #1f1f1f; font-weight: 600; text-decoration: none; border: 1px solid #dadce0; }
+.google-btn:hover { background: #f4f4f6; }
+.google-btn:focus-visible { outline: 3px solid var(--accent2); outline-offset: 2px; }
+.orline { text-align: center; margin: 10px 0 0; }
+.acct { display: flex; gap: 12px; align-items: center; margin: 6px 0 10px; }
+.acct p { margin: 2px 0 0; overflow-wrap: anywhere; }
+.avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; border: 1px solid var(--line); }
+.avatar[hidden], #googleBlock[hidden], #passBlock[hidden], #orLine[hidden], #fbWaBlock[hidden], #fbGuest[hidden], #fbWho[hidden], #adminLink[hidden] { display: none; }
+.dialog label.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.4; margin-top: 10px; }
+.dialog label.check input { width: auto; margin-top: 3px; flex: none; }
+#authError:empty { display: none; }
