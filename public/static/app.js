@@ -359,18 +359,48 @@
     $("#authSwitch").textContent = signup ? "I have an account" : "Create account";
     $("#authPass").autocomplete = signup ? "new-password" : "current-password";
     authStatus.textContent = ""; authStatus.classList.remove("bad");
+    if (typeof applyLoginOptions === "function") applyLoginOptions();
   }
+  let loginOptions = { google: false, password: true };
+  function showAuthError(text) { $("#authError").textContent = text || ""; }
+  function applyLoginOptions() {
+    $("#googleBlock").hidden = !loginOptions.google;
+    $("#orLine").hidden = !(loginOptions.google && loginOptions.password);
+    $("#passBlock").hidden = !loginOptions.password;
+    $("#authSwitch").hidden = !loginOptions.password; $("#authGo").hidden = !loginOptions.password;
+    $("#authTitle").textContent = loginOptions.password ? (signupMode ? "Create account" : "Log in") : "Log in";
+  }
+  $("#googleBtn").addEventListener("click", () => { try { sessionStorage.setItem("aira_keep_chat", "1"); } catch (e) { /* ignore */ } });
+  const AUTH_MESSAGES = {
+    not_configured: "Google sign-in is not set up on this site yet.", denied: "Google sign-in was cancelled.",
+    state: "The sign-in took too long or was opened in another browser. Please try again.",
+    google: "Google could not complete the sign-in. Please try again.",
+    token: "Google sent a sign-in token that could not be trusted, so you were not logged in.",
+    unverified: "Your Google email address is not verified, so you cannot log in with it.",
+    conflict: "This email already belongs to a different Google account on Aira.",
+    busy: "Too many sign-in tries. Please wait a few minutes.",
+  };
   function openDialog(d) { if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", ""); }
-  function setUser(email) {
-    user = email;
+  let me = {};   // what the server says about the logged-in person (name, picture, google, admin ...)
+  function setUser(email, info) {
+    user = email; me = email ? (info || {}) : {};
     if (!email) chatProject = null;
     $("#accountBtn").textContent = email ? "Account" : "Log in";
     notify();
     if (leftEl.textContent) leftText(email ? userPerDay : perDay);
   }
   $("#accountBtn").addEventListener("click", () => {
-    if (user) { $("#accountEmail").textContent = "Logged in as " + user; $("#accountStatus").textContent = ""; $("#delPass").value = ""; openDialog(accountDialog); }
-    else { setAuthMode(false); openDialog(authDialog); }
+    if (user) {
+      $("#accountName").textContent = me.name || user.split("@")[0];
+      $("#accountEmail").textContent = user;
+      const pic = $("#accountPic");
+      if (me.picture && /^https:\/\//.test(me.picture)) { pic.src = me.picture; pic.hidden = false; } else { pic.removeAttribute("src"); pic.hidden = true; }
+      $("#adminLink").hidden = !me.admin;
+      const usesPassword = me.hasPassword !== false;
+      $("#delLabel").textContent = usesPassword ? "To delete your account and all saved chats, type your password:" : "To delete your account and all saved data, type your email address:";
+      $("#delPass").type = usesPassword ? "password" : "email"; $("#delPass").autocomplete = usesPassword ? "current-password" : "off";
+      $("#accountStatus").textContent = ""; $("#delPass").value = ""; openDialog(accountDialog);
+    } else { setAuthMode(false); showAuthError(""); openDialog(authDialog); }
   });
   $("#authSwitch").addEventListener("click", () => setAuthMode(!signupMode));
   $("#authCancel").addEventListener("click", () => authDialog.close());
@@ -384,7 +414,8 @@
     if (!r.ok) { authStatus.textContent = r.data.error || "Something went wrong."; authStatus.classList.add("bad"); return; }
     $("#authPass").value = "";
     authDialog.close();
-    setUser(r.data.email);
+    const who = await api("/api/me");
+    setUser(r.data.email, who.ok ? who.data : null);
     await saveRemote();       // keep the chat you were just having
     loadList();
   });
@@ -394,9 +425,10 @@
   });
   $("#deleteBtn").addEventListener("click", async () => {
     const st = $("#accountStatus"); st.classList.remove("bad");
-    if (!$("#delPass").value) { st.textContent = "Type your password first."; st.classList.add("bad"); return; }
+    const byEmail = me.hasPassword === false;
+    if (!$("#delPass").value) { st.textContent = byEmail ? "Type your email address first." : "Type your password first."; st.classList.add("bad"); return; }
     if (!confirm("Delete your account and all saved chats? This cannot be undone.")) return;
-    const r = await api("/api/delete-account", "POST", { password: $("#delPass").value });
+    const r = await api("/api/delete-account", "POST", byEmail ? { confirm: $("#delPass").value } : { password: $("#delPass").value });
     if (!r.ok) { st.textContent = r.data.error || "Could not delete."; st.classList.add("bad"); return; }
     accountDialog.close(); setUser(null); savedChats = []; drawList(); newChat();
   });
@@ -410,15 +442,24 @@
   }
   starButtons.forEach((b) => b.addEventListener("click", () => { rating = rating === Number(b.dataset.v) ? 0 : Number(b.dataset.v); paintStars(); }));
   function say(text, bad) { fbStatus.textContent = text; fbStatus.classList.toggle("bad", !!bad); }
-  $("#openFeedback").addEventListener("click", () => { say(""); openDialog(dialog); });
+  function prepareFeedback() {
+    say("");
+    $("#fbWho").hidden = !user; $("#fbWaBlock").hidden = !user; $("#fbGuest").hidden = !!user;
+    if (user) $("#fbWho").textContent = "You are sending this as " + (me.name || user.split("@")[0]) + " (" + user + "). The owner will see your name and email.";
+  }
+  $("#openFeedback").addEventListener("click", () => { prepareFeedback(); openDialog(dialog); });
   $("#fbCancel").addEventListener("click", () => dialog.close());
   $("#feedbackForm").addEventListener("submit", async (e) => {
     e.preventDefault(); fbSend.disabled = true; say("Sending...");
-    const r = await api("/api/feedback", "POST", { type: $("#fbType").value, rating, text: $("#fbText").value, contact: $("#fbContact").value });
+    // No name, email or id is sent: the server knows who you are from your login.
+    const body = { type: $("#fbType").value, rating, text: $("#fbText").value };
+    if (user) { const wa = $("#fbWhatsapp").value.trim(); if (wa) { body.whatsapp = wa; body.consent = $("#fbConsent").checked; } }
+    else body.contact = $("#fbContact").value;
+    const r = await api("/api/feedback", "POST", body);
     fbSend.disabled = false;
     if (r.ok) {
       say("Thank you! Your feedback was sent.");
-      $("#fbText").value = ""; rating = 0; paintStars();
+      $("#fbText").value = ""; $("#fbWhatsapp").value = ""; $("#fbConsent").checked = false; rating = 0; paintStars();
       setTimeout(() => { if (dialog.open) dialog.close(); }, 1400);
     } else say(r.data.error || "Could not send. Please try again.", true);
   });
@@ -433,6 +474,8 @@
       perDay = cfg.perDay || perDay; userPerDay = cfg.userPerDay || userPerDay;
       features = cfg.features || features;
       (cfg.modes || []).forEach((m) => { const o = document.createElement("option"); o.value = m.id; o.textContent = m.label; modeSel.appendChild(o); });
+      loginOptions = { google: !!cfg.googleEnabled, password: cfg.passwordLogin !== false };
+      applyLoginOptions();
       if (cfg.name) document.title = cfg.name + " - your free AI assistant";
       if (cfg.instagram && /^https:\/\//.test(cfg.instagram)) { const l = $("#instaLink"); l.href = cfg.instagram; l.hidden = false; }
     }
@@ -443,10 +486,20 @@
     searchWrap.hidden = !features.search; searchOn.checked = !!prefs.search && features.search;
     attachBtn.hidden = !features.image;
     if (local) { chatId = local.id; messages = local.messages; chatProject = local.project; }
-    setUser(meRes.ok ? meRes.data.email : null);
+    setUser(meRes.ok ? meRes.data.email : null, meRes.ok ? meRes.data : null);
     updatePlaceholder(); showAll(); paintStars();
     if (user) loadList(); else drawList();
     input.focus();
+    // Coming back from Google: show a friendly message if it failed, keep the chat if it worked.
+    try {
+      const url = new URL(location.href), problem = url.searchParams.get("auth_error");
+      if (problem) {
+        url.searchParams.delete("auth_error"); history.replaceState(null, "", url.pathname + (url.search || "") + url.hash);
+        showAuthError(AUTH_MESSAGES[problem] || "Sign-in did not work. Please try again."); openDialog(authDialog);
+      } else if (user && sessionStorage.getItem("aira_keep_chat") === "1") {
+        sessionStorage.removeItem("aira_keep_chat"); await saveRemote(); loadList();
+      }
+    } catch (e) { /* storage may be blocked */ }
   }
   if (location.protocol === "file:") $("#nofile").style.display = "block";
   // A small, read-only doorway for the dashboard (dashboard.js). It does not change how chat works.
