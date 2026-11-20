@@ -11,6 +11,7 @@ import getpass
 import hashlib
 import hmac
 import auth_google
+import diag
 import features
 import json
 import os
@@ -19,6 +20,7 @@ import secrets
 import sqlite3
 import sys
 import time
+import traceback
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from html import escape
@@ -27,7 +29,9 @@ from urllib.parse import quote
 import requests
 
 import dbx
-from flask import Flask, Response, jsonify, request, send_from_directory
+
+dbx.LOG = diag.log   # database retries are written to the log
+from flask import Flask, Response, g, jsonify, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -174,45 +178,84 @@ def add_columns(conn, table, wanted):
     have = [row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()]
     for column, kind in wanted.items():
         if column not in have:
-            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+            except Exception as error:
+                # Another Vercel instance added the same column a moment ago. That is fine.
+                if "duplicate column" not in str(error).lower():
+                    raise
 
 
-def init_db():
-    now = time.time()
+BASE_SQL = [
+    "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)",
+    "CREATE TABLE IF NOT EXISTS usage (day TEXT, who TEXT, count INTEGER, PRIMARY KEY (day, who))",
+    "CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, created TEXT, kind TEXT, rating INTEGER, text TEXT, contact TEXT)",
+    "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, pw TEXT, created TEXT)",
+    "CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER, expires REAL)",
+    "CREATE TABLE IF NOT EXISTS chats (id TEXT PRIMARY KEY, user_id INTEGER, title TEXT, mode TEXT, updated REAL, messages TEXT, project_id TEXT)",
+    "CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, user_id INTEGER, name TEXT, instructions TEXT, created REAL, updated REAL)",
+    "CREATE INDEX IF NOT EXISTS projects_user ON projects (user_id, updated)",
+    "CREATE INDEX IF NOT EXISTS chats_user ON chats (user_id, updated)",
+    "CREATE TABLE IF NOT EXISTS previews (id TEXT PRIMARY KEY, created REAL, html TEXT)",
+    "CREATE TABLE IF NOT EXISTS hits (key TEXT, ts REAL)",
+    "CREATE INDEX IF NOT EXISTS hits_key ON hits (key, ts)",
+]
+USER_COLUMNS = {"google_sub": "TEXT", "name": "TEXT", "picture": "TEXT", "last_login": "TEXT", "email_verified": "INTEGER DEFAULT 0"}
+FEEDBACK_COLUMNS = {"user_id": "INTEGER", "google_sub": "TEXT", "email": "TEXT", "name": "TEXT", "whatsapp": "TEXT", "consent": "INTEGER DEFAULT 0"}
+CLEANUP_EVERY = 3600   # seconds between housekeeping runs
+
+
+def schema_version():
+    """Changes by itself whenever a table, index or column is added above or in features.SCHEMA."""
+    text = json.dumps([BASE_SQL, USER_COLUMNS, FEEDBACK_COLUMNS, features.SCHEMA], sort_keys=True)
+    return hashlib.sha256(text.encode()).hexdigest()[:12]
+
+
+def cleanup(conn, now):
     cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-    statements = [
-        ("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)", ()),
-        ("CREATE TABLE IF NOT EXISTS usage (day TEXT, who TEXT, count INTEGER, PRIMARY KEY (day, who))", ()),
-        ("CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, created TEXT, "
-         "kind TEXT, rating INTEGER, text TEXT, contact TEXT)", ()),
-        ("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, pw TEXT, created TEXT)", ()),
-        ("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, user_id INTEGER, expires REAL)", ()),
-        ("CREATE TABLE IF NOT EXISTS chats (id TEXT PRIMARY KEY, user_id INTEGER, title TEXT, mode TEXT, updated REAL, messages TEXT, project_id TEXT)", ()),
-        ("CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY, user_id INTEGER, name TEXT, instructions TEXT, created REAL, updated REAL)", ()),
-        ("CREATE INDEX IF NOT EXISTS projects_user ON projects (user_id, updated)", ()),
-        ("CREATE INDEX IF NOT EXISTS chats_user ON chats (user_id, updated)", ()),
-        ("CREATE TABLE IF NOT EXISTS previews (id TEXT PRIMARY KEY, created REAL, html TEXT)", ()),
-        ("CREATE TABLE IF NOT EXISTS hits (key TEXT, ts REAL)", ()),
-        ("CREATE INDEX IF NOT EXISTS hits_key ON hits (key, ts)", ()),
-        ("INSERT OR IGNORE INTO meta VALUES ('salt', ?)", (secrets.token_hex(16),)),
+    batch(conn, [
         ("DELETE FROM sessions WHERE expires < ?", (now,)),
         ("DELETE FROM previews WHERE created < ?", (now - 7200,)),
         ("DELETE FROM hits WHERE ts < ?", (now - 86400,)),
         ("DELETE FROM usage WHERE day < ?", (cutoff,)),
-    ]
+        ("INSERT OR REPLACE INTO meta VALUES ('cleanup_ts', ?)", (str(now),)),
+    ])
+
+
+def migrate(conn):
+    """Create or upgrade every table. Safe to run twice, and safe if two Vercel instances run it together."""
+    batch(conn, [(sql, ()) for sql in BASE_SQL] + [("INSERT OR IGNORE INTO meta VALUES ('salt', ?)", (secrets.token_hex(16),))])
+    # Older databases have a chats table without project_id.
+    add_columns(conn, "chats", {"project_id": "TEXT"})
+    conn.execute("CREATE INDEX IF NOT EXISTS chats_project ON chats (user_id, project_id)")
+    # Google sign-in: new columns on old databases. Existing users and feedback are kept as they are.
+    add_columns(conn, "users", USER_COLUMNS)
+    add_columns(conn, "feedback", FEEDBACK_COLUMNS)
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_google_sub ON users (google_sub)")
+    conn.execute("CREATE INDEX IF NOT EXISTS feedback_user ON feedback (user_id)")
+    batch(conn, [(sql, ()) for sql in features.SCHEMA])   # Phase 3 tables (library, documents, tasks, expenses, memory, settings)
+
+
+def init_db():
+    """One database round trip when everything is already up to date (was about twenty), so cold starts are fast."""
+    now = time.time()
     with db() as conn:
-        batch(conn, statements)
-        # Older databases have a chats table without project_id. Add the column once, never twice.
-        columns = [row[1] for row in conn.execute("PRAGMA table_info(chats)").fetchall()]
-        if "project_id" not in columns:
-            conn.execute("ALTER TABLE chats ADD COLUMN project_id TEXT")
-        conn.execute("CREATE INDEX IF NOT EXISTS chats_project ON chats (user_id, project_id)")
-        # Google sign-in: new columns on old databases. Existing users and feedback are kept as they are.
-        add_columns(conn, "users", {"google_sub": "TEXT", "name": "TEXT", "picture": "TEXT", "last_login": "TEXT", "email_verified": "INTEGER DEFAULT 0"})
-        add_columns(conn, "feedback", {"user_id": "INTEGER", "google_sub": "TEXT", "email": "TEXT", "name": "TEXT", "whatsapp": "TEXT", "consent": "INTEGER DEFAULT 0"})
-        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS users_google_sub ON users (google_sub)")
-        conn.execute("CREATE INDEX IF NOT EXISTS feedback_user ON feedback (user_id)")
-        batch(conn, [(sql, ()) for sql in features.SCHEMA])   # Phase 3 tables (library, documents, tasks, expenses, memory, settings)
+        info = {}
+        try:
+            info = dict(conn.execute("SELECT key, value FROM meta WHERE key IN ('schema_v', 'cleanup_ts', 'salt')").fetchall())
+        except Exception as error:
+            if "no such table" not in str(error).lower():
+                raise
+        if info.get("salt") and not _salt_cache:
+            _salt_cache.append(info["salt"])
+        version = schema_version()
+        if info.get("schema_v") != version:
+            diag.log("info", "schema_upgrade", old=info.get("schema_v") or "none", new=version)
+            migrate(conn)
+            conn.execute("INSERT OR REPLACE INTO meta VALUES ('schema_v', ?)", (version,))
+            cleanup(conn, now)
+        elif now - float(info.get("cleanup_ts") or 0) > CLEANUP_EVERY:
+            cleanup(conn, now)
 
 
 def salt():
@@ -476,10 +519,18 @@ def chat():
 def unexpected(error):
     if isinstance(error, HTTPException):
         return error
-    print(f"[error] {type(error).__name__}: {error}", file=sys.stderr, flush=True)
+    ref = getattr(g, "rid", None) or secrets.token_hex(4)
+    category = diag.classify(error)
+    # One JSON line in Vercel > Logs: what failed, where, and the traceback (secrets removed).
+    diag.log("error", "request_failed", ref=ref, method=request.method, path=request.path, category=category,
+             exc=type(error).__name__, message=str(error), status=getattr(error, "status", None),
+             seconds=round(time.time() - getattr(g, "t0", time.time()), 2), trace=traceback.format_exc())
+    if category != "code":
+        diag.remember(category, error)
+    status = diag.CATEGORIES[category][0]
     if request.path.startswith("/api/"):
-        return jsonify(error="Aira had a problem saving or loading data. Please try again in a moment."), 503
-    return Response("Something went wrong. Please try again.", 500, mimetype="text/plain")
+        return jsonify(error=diag.public_message(category, ref), error_id=ref, category=category), status
+    return Response(f"Something went wrong. Please try again. (ref {ref})", 500, mimetype="text/plain")
 
 
 @app.errorhandler(413)
@@ -1139,9 +1190,22 @@ def run_status(test_ai):
         mode = "local file " + CFG.db_path
     try:
         ensure_db()
+        started = time.time()
+        with db() as conn:
+            conn.execute("SELECT 1").fetchone()
+            tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()}
+        ms = round((time.time() - started) * 1000)
         add("Database", bool(CFG.turso_url) or not os.environ.get("VERCEL"), mode + " - connected")
-    except Exception as error:   # show the reason to the owner
-        add("Database", False, mode + " - NOT working: " + str(error)[:220])
+        needed = {"users", "sessions", "chats", "projects", "feedback", "usage", "items", "docs", "tasks", "expenses", "memories", "settings"}
+        missing = sorted(needed - tables)
+        add("Database tables", not missing, "all present" if not missing else "missing: " + ", ".join(missing) + " (they are created automatically on the next request; if this stays, send me this line)")
+        add("Database speed", ms < 400, f"two round trips took {ms} ms" + ("" if ms < 400 else ". Slow: put the Turso database in the region closest to your Vercel functions (Vercel default is Washington DC, iad1)."))
+    except Exception as error:   # show the reason to the owner, without secrets
+        category = diag.classify(error)
+        add("Database", False, mode + " - NOT working (" + category + "): " + diag.redact(error)[:220])
+        add("What to do", None, diag.CATEGORIES[category][2])
+    if diag.last_problem:
+        add("Last database problem seen by this server instance", None, f"{diag.last_problem['when']} - {diag.last_problem['category']}: {diag.last_problem['what']}")
     if auth_google.enabled():
         add("Google login", True, "on. Redirect address: " + auth_google.redirect_uri())
     else:
@@ -1206,6 +1270,8 @@ def safety_headers(response):
         "connect-src 'self'; frame-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
     ))
     response.headers["X-Content-Type-Options"] = "nosniff"
+    if getattr(g, "rid", None):
+        response.headers["X-Request-Id"] = g.rid
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
@@ -1225,6 +1291,8 @@ def ensure_db():
 
 @app.before_request
 def prepare():
+    g.rid = secrets.token_hex(4)
+    g.t0 = time.time()
     if request.path not in ("/", "/privacy", "/health", "/status") and not request.path.startswith("/static/"):
         ensure_db()
 
