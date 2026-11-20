@@ -748,3 +748,160 @@ a.nav-item:hover { background: rgba(116, 75, 225, .12); border-color: rgba(151, 
   #welcome .feature, #view-home .mode-card, #view-home .card,
   #view-projects .card, #view-help .card, .primary, .send { transition: none !important; }
 }
+
+/* ==========================================================
+   AIRA COSMIC 3D — premium visual-only home treatment
+   CSS only: existing HTML, JS, routes, APIs and backend untouched.
+   ========================================================== */
+#view-home {
+  background:
+    radial-gradient(ellipse 38% 35% at 27% 26%, rgba(104, 57, 229, .16), transparent 72%),
+    radial-gradient(ellipse 50% 32% at 78% 10%, rgba(44, 78, 174, .12), transparent 72%),
+    radial-gradient(circle at 12% 18%, rgba(255,255,255,.42) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 82% 27%, rgba(184,157,255,.5) 0 1px, transparent 2px),
+    radial-gradient(circle at 65% 58%, rgba(111,179,255,.35) 0 1px, transparent 2px),
+    transparent;
+}
+.hero-card {
+  display: grid;
+  grid-template-columns: minmax(250px, .9fr) minmax(0, 1.1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  justify-items: center;
+  column-gap: clamp(18px, 4vw, 56px);
+  min-height: 430px;
+  padding: 54px clamp(12px, 4vw, 48px) 48px;
+  overflow: hidden;
+  perspective: 1400px;
+  transform-style: preserve-3d;
+  background: radial-gradient(ellipse at 28% 54%, rgba(92,48,199,.13), transparent 38%);
+}
+/* A luminous glass-like planet */
+.hero-card::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 22%;
+  top: 48%;
+  width: clamp(174px, 21vw, 258px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) translateZ(70px);
+  background:
+    radial-gradient(ellipse at 29% 22%, rgba(255,255,255,.98) 0 1.2%, rgba(220,204,255,.85) 2.5%, transparent 12%),
+    radial-gradient(ellipse at 34% 30%, rgba(193,161,255,.96) 0, rgba(116,65,231,.92) 13%, rgba(47,27,113,.96) 39%, rgba(13,11,36,.98) 68%, #05050d 78%);
+  border: 1px solid rgba(224,211,255,.62);
+  box-shadow:
+    inset -28px -25px 44px rgba(0,0,0,.86),
+    inset 13px 10px 28px rgba(255,255,255,.2),
+    inset 0 0 22px rgba(159,111,255,.42),
+    0 0 22px rgba(156,112,255,.55),
+    0 0 72px rgba(104,57,229,.4),
+    0 32px 60px rgba(0,0,0,.52);
+  animation: aira-planet-drift 8s ease-in-out infinite;
+  pointer-events: none;
+}
+/* Orbital ring with a second, faint elliptical trail */
+.hero-card::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 22%;
+  top: 48%;
+  width: clamp(255px, 31vw, 390px);
+  height: clamp(76px, 9vw, 112px);
+  border: 2px solid rgba(184,151,255,.88);
+  border-left-color: rgba(122,88,255,.22);
+  border-bottom-color: rgba(124,93,255,.42);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(-22deg) rotateX(66deg) translateZ(105px);
+  box-shadow: 0 0 10px rgba(190,159,255,.8), 0 0 28px rgba(129,76,255,.65), inset 0 0 14px rgba(129,76,255,.24);
+  animation: aira-ring-spin 18s linear infinite;
+  pointer-events: none;
+}
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  transform: translateZ(38px);
+  text-align: left;
+}
+.hero-copy::before {
+  margin: 0 0 12px;
+  padding-left: 0;
+  font-size: clamp(58px, 7vw, 94px);
+  letter-spacing: .08em;
+  background: linear-gradient(115deg, #fff 4%, #ded1ff 34%, #a783ff 66%, #6e49ed 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: drop-shadow(0 3px 0 rgba(42,20,93,.9)) drop-shadow(0 12px 28px rgba(126,80,255,.48));
+}
+.hero-copy .sub { letter-spacing: .24em; font-size: 11px; }
+.hero-copy h2 { font-size: clamp(22px, 2.8vw, 30px); text-shadow: 0 4px 24px rgba(158,124,255,.28); }
+.hero-card .linkbtn {
+  z-index: 1;
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: start;
+  margin: 12px 0 0;
+  position: relative;
+  transform: translateZ(48px);
+  box-shadow: 0 10px 28px rgba(106,64,237,.42), inset 0 1px 0 rgba(255,255,255,.24);
+}
+#view-home .sec { letter-spacing: .02em; text-shadow: 0 0 22px rgba(143,108,255,.22); }
+#view-home .mode-card,
+#view-home .card {
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+#view-home .mode-card::before,
+#view-home .card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(221,204,255,.5), transparent);
+  opacity: .7;
+  pointer-events: none;
+}
+#view-home .mode-card:hover,
+#view-home .card:hover {
+  transform: perspective(1000px) translateY(-6px) rotateX(3deg) rotateY(-2deg) translateZ(12px);
+}
+#view-home .mode-card { transition: transform .42s cubic-bezier(.2,.75,.2,1), box-shadow .42s ease, border-color .3s ease; }
+@keyframes aira-planet-drift {
+  0%, 100% { transform: translate(-50%, -50%) translate3d(0, 0, 70px) rotateY(-8deg); }
+  50% { transform: translate(-50%, -53%) translate3d(0, -10px, 92px) rotateY(9deg); }
+}
+@keyframes aira-ring-spin {
+  0% { transform: translate(-50%, -50%) rotate(-22deg) rotateX(66deg) rotateZ(0deg) translateZ(105px); }
+  100% { transform: translate(-50%, -50%) rotate(-22deg) rotateX(66deg) rotateZ(360deg) translateZ(105px); }
+}
+@media (max-width: 899px) {
+  .hero-card { min-height: 370px; column-gap: 14px; }
+  .hero-card::before, .hero-card::after { left: 23%; }
+}
+@media (max-width: 640px) {
+  .hero-card {
+    display: flex;
+    min-height: 510px;
+    justify-content: flex-end;
+    padding: 230px 14px 28px;
+    gap: 8px;
+    background: radial-gradient(ellipse at 50% 28%, rgba(100,57,219,.16), transparent 52%);
+  }
+  .hero-card::before { left: 50%; top: 112px; width: 178px; }
+  .hero-card::after { left: 50%; top: 112px; width: 270px; height: 78px; }
+  .hero-copy { text-align: center; width: 100%; }
+  .hero-copy::before { font-size: 56px; text-align: center; margin: 0 auto 10px; }
+  .hero-copy .sub { letter-spacing: .16em; font-size: 10px; }
+  .hero-card .linkbtn { justify-self: center; align-self: center; margin-top: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-card::before, .hero-card::after { animation: none !important; }
+  #view-home .mode-card, #view-home .card { transition: none !important; }
+}
