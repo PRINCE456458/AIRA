@@ -435,3 +435,220 @@ a.src { display: block; margin: 4px 0; }
 .dialog label.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.4; margin-top: 10px; }
 .dialog label.check input { width: auto; margin-top: 3px; flex: none; }
 #authError:empty { display: none; }
+
+/* ==========================================================
+   AIRA PREMIUM VISUAL REFRESH
+   Design-only overrides. Existing markup, routes and behavior
+   are intentionally preserved.
+   ========================================================== */
+:root {
+  --bg: #03040a;
+  --panel: rgba(12, 13, 28, .78);
+  --text: #f7f5ff;
+  --muted: #aaa8c4;
+  --line: rgba(151, 119, 255, .24);
+  --accent: #713cff;
+  --accent2: #a98aff;
+  --accent-hover: #8b62ff;
+  --bot: rgba(19, 17, 39, .92);
+}
+html, body { background: #03040a; }
+body {
+  background:
+    radial-gradient(ellipse 52% 40% at 68% 38%, rgba(82, 39, 185, .19), transparent 72%),
+    radial-gradient(ellipse 40% 34% at 18% 90%, rgba(36, 67, 142, .12), transparent 72%),
+    #03040a;
+}
+.shell { background: transparent; }
+.sidebar {
+  padding: 22px 14px 16px;
+  background: linear-gradient(180deg, rgba(5, 6, 15, .98), rgba(5, 5, 13, .96));
+  border-right: 1px solid rgba(164, 139, 255, .16);
+  box-shadow: 12px 0 50px rgba(0, 0, 0, .22);
+}
+.side-brand { min-height: 72px; padding: 0 10px 22px; gap: 12px; }
+.side-brand .logoimg { display: none; }
+.side-brand::before {
+  content: "AIRA";
+  display: block;
+  flex: none;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 850;
+  letter-spacing: .075em;
+  background: linear-gradient(115deg, #a58aff 8%, #fff 48%, #8c63ff 88%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 16px rgba(126, 82, 255, .38));
+}
+.side-brand strong { font-size: 13px; letter-spacing: .02em; }
+.side-brand .tag { font-size: 11px; color: #8886a6; }
+.side-label { margin: 16px 10px 7px; color: #77748f; letter-spacing: .16em; }
+.side-nav { gap: 7px; }
+.nav-item {
+  min-height: 48px;
+  padding: 11px 13px;
+  border-radius: 13px;
+  color: #c7c4dc;
+  border: 1px solid transparent;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.nav-item .ic { width: 19px; height: 19px; color: #b8b3d1; }
+a.nav-item:hover { background: rgba(116, 75, 225, .12); border-color: rgba(151, 119, 255, .16); transform: translateX(2px); }
+.nav-item.active {
+  color: #fff;
+  background: linear-gradient(105deg, rgba(100, 53, 220, .42), rgba(87, 54, 158, .14));
+  border-color: rgba(153, 117, 255, .36);
+  box-shadow: inset 0 0 22px rgba(116, 70, 255, .08), 0 0 24px rgba(90, 54, 190, .13);
+}
+.nav-item.active .ic { color: #fff; filter: drop-shadow(0 0 7px rgba(167, 139, 250, .5)); }
+.side-foot { border-top-color: rgba(164, 139, 255, .14); }
+.topbar {
+  min-height: 68px;
+  padding: 12px 26px;
+  background: rgba(4, 5, 13, .72);
+  border-bottom: 1px solid rgba(164, 139, 255, .13);
+  backdrop-filter: blur(22px);
+}
+.view-title { font-size: 16px; font-weight: 600; color: #d8d5e9; }
+.topbar .ghost { background: rgba(255,255,255,.035); border-color: rgba(164, 139, 255, .2); border-radius: 999px; }
+.topbar .ghost:hover { background: rgba(113, 60, 255, .16); }
+.page-wrap { max-width: 1440px; padding: 30px clamp(18px, 4vw, 58px) 64px; }
+
+/* Home hero follows the supplied AIRA dashboard reference. */
+#view-home {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 60% 33% at 50% 35%, rgba(91, 48, 206, .19), transparent 75%),
+    radial-gradient(ellipse 55% 16% at 50% 72%, rgba(111, 65, 255, .12), transparent 76%);
+}
+#view-home::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  left: -12%; right: -12%; top: 31%; height: 33%;
+  border-top: 2px solid rgba(155, 121, 255, .72);
+  border-radius: 50% 50% 0 0 / 45% 45% 0 0;
+  box-shadow: 0 -8px 32px rgba(117, 71, 255, .28), 0 -22px 72px rgba(84, 49, 196, .17);
+  transform: rotate(-1.5deg);
+  opacity: .78;
+}
+#view-home::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  left: -8%; right: -8%; bottom: 1%; height: 110px;
+  border-top: 1px solid rgba(135, 97, 255, .55);
+  border-radius: 50% 50% 0 0 / 40% 40% 0 0;
+  box-shadow: 0 -5px 26px rgba(113, 60, 255, .19);
+  transform: rotate(1.2deg);
+}
+.hero-card {
+  min-height: 365px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 52px 22px 38px;
+  margin: 0 auto 32px;
+  max-width: 1120px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  position: relative;
+}
+.hero-mini { display: none; }
+.hero-copy { flex: none; min-width: 0; width: 100%; }
+.hero-copy::before {
+  content: "AIRA";
+  display: block;
+  margin: 0 auto 12px;
+  font-size: clamp(66px, 9vw, 116px);
+  line-height: .98;
+  font-weight: 900;
+  letter-spacing: .12em;
+  padding-left: .12em;
+  background: linear-gradient(110deg, #9c7bff 5%, #fff 42%, #d9d1ff 58%, #8657ff 92%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 24px rgba(126, 82, 255, .38));
+}
+.hero-copy .sub {
+  color: #f0eaff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .38em;
+  text-transform: uppercase;
+  margin: 12px 0 18px;
+}
+.hero-copy h2 { margin: 0 0 5px; font-size: clamp(21px, 3vw, 28px); color: #e9e4ff; font-weight: 600; }
+.hero-copy .muted { font-size: 15px; color: #aaa5ca; }
+.hero-card .linkbtn { margin-top: 14px; min-width: 190px; border-radius: 999px; padding: 12px 24px; }
+.sec { margin: 0 0 15px; font-size: 17px; font-weight: 650; color: #f1edff; }
+.cards { gap: 14px; margin-bottom: 26px; }
+.mode-card {
+  min-height: 132px;
+  padding: 20px;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(15, 16, 34, .88), rgba(10, 9, 23, .86));
+  border-color: rgba(144, 119, 226, .25);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 12px 35px rgba(0,0,0,.2);
+}
+.mode-card b { color: #f4efff; font-size: 16px; }
+.mode-card span { color: #aaa6c5; }
+.mode-card:hover { transform: translateY(-4px); border-color: rgba(162, 130, 255, .65); box-shadow: 0 12px 34px rgba(83, 50, 180, .2); }
+.card {
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(16, 16, 35, .88), rgba(9, 10, 22, .9));
+  border-color: rgba(144, 119, 226, .22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 14px 40px rgba(0,0,0,.18);
+}
+.card h3 { color: #f0ecff; }
+.primary, .send {
+  background: linear-gradient(120deg, #6332ed, #925dff 60%, #7444ef);
+  box-shadow: 0 7px 24px rgba(104, 61, 236, .34);
+  border-radius: 12px;
+}
+.primary:hover, .send:hover { background: linear-gradient(120deg, #7447ff, #a47aff); }
+.ghost { border-color: rgba(154, 133, 225, .24); background: rgba(255,255,255,.035); }
+.composer textarea, .controls select, .dialog select, .dialog textarea, .dialog input {
+  background: rgba(12, 12, 28, .94);
+  border-color: rgba(155, 125, 255, .3);
+}
+.composer textarea { border-radius: 16px; }
+.composer textarea:focus { border-color: #9a79ff; box-shadow: 0 0 0 3px rgba(126, 83, 255, .16), 0 0 22px rgba(126, 83, 255, .12); }
+.bottom { background: rgba(4, 5, 13, .9); border-top-color: rgba(164, 139, 255, .15); }
+.chatbar { padding: 12px 22px 0; }
+.chatview .chat { padding: 24px clamp(16px, 4vw, 44px); }
+.bubble { border-radius: 18px; }
+.bot .bubble { background: rgba(17, 15, 36, .92); border-color: rgba(151, 119, 255, .2); }
+.dialog, .drawer { background: #0b0b19; border-color: rgba(151, 119, 255, .26); }
+
+@media (min-width: 1100px) {
+  #view-home .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 899px) {
+  .sidebar { background: rgba(5, 6, 15, .99); }
+  .topbar { padding: 10px 14px; }
+  .page-wrap { padding: 20px 16px 48px; }
+  .hero-card { min-height: 300px; padding: 35px 12px 28px; }
+  #view-home::before { top: 28%; }
+}
+@media (max-width: 520px) {
+  .hero-copy::before { font-size: 62px; }
+  .hero-copy .sub { font-size: 10px; letter-spacing: .22em; }
+  .hero-card { min-height: 260px; }
+  .mode-card { min-height: 112px; }
+  .actions { gap: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-item, .mode-card { transition: none; }
+}
