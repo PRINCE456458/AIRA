@@ -905,3 +905,138 @@ a.nav-item:hover { background: rgba(116, 75, 225, .12); border-color: rgba(151, 
   .hero-card::before, .hero-card::after { animation: none !important; }
   #view-home .mode-card, #view-home .card { transition: none !important; }
 }
+
+
+/* ==========================================================
+   AIRA COSMIC MOTION + 4K DISPLAY PASS
+   Visual-only CSS. No application logic or backend changes.
+   ========================================================== */
+:root {
+  --aira-violet: #9564ff;
+  --aira-lilac: #d9c5ff;
+  --aira-cyan: #72dfff;
+}
+html { background: #05030d; }
+body { position: relative; isolation: isolate; background-color: #05030d; }
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: -18%;
+  z-index: -1;
+  pointer-events: none;
+  will-change: transform, background-position;
+}
+body::before {
+  opacity: .82;
+  background:
+    radial-gradient(ellipse at 18% 32%, rgba(103,48,232,.28), transparent 34%),
+    radial-gradient(ellipse at 82% 22%, rgba(34,92,191,.20), transparent 31%),
+    radial-gradient(ellipse at 70% 82%, rgba(114,48,205,.20), transparent 36%),
+    radial-gradient(circle at 12% 18%, rgba(255,255,255,.8) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 75% 38%, rgba(185,157,255,.72) 0 1px, transparent 2px),
+    radial-gradient(circle at 42% 76%, rgba(115,216,255,.62) 0 1px, transparent 2px),
+    radial-gradient(circle at 88% 72%, rgba(255,255,255,.65) 0 1px, transparent 2px);
+  background-size: 130% 130%, 145% 145%, 135% 135%, 210px 210px, 270px 270px, 330px 330px, 390px 390px;
+  animation: aira-nebula-drift 38s ease-in-out infinite alternate, aira-star-parallax 70s linear infinite;
+}
+body::after {
+  opacity: .34;
+  background: linear-gradient(112deg, transparent 38%, rgba(148,104,255,.10) 49%, rgba(117,218,255,.08) 51%, transparent 63%);
+  transform: translate3d(-8%,0,0) rotate(-8deg);
+  animation: aira-light-beam 19s ease-in-out infinite alternate;
+}
+@keyframes aira-nebula-drift {
+  0% { transform: translate3d(-1.2%,-.6%,0) scale(1); filter: hue-rotate(-8deg); }
+  50% { transform: translate3d(1.1%,1%,0) scale(1.035); filter: hue-rotate(8deg); }
+  100% { transform: translate3d(-.5%,1.4%,0) scale(1.06); filter: hue-rotate(-3deg); }
+}
+@keyframes aira-star-parallax {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 70px 40px, 120px 80px, 35px 140px; }
+  to { background-position: 0 0, 0 0, 0 0, 420px 260px, -250px 420px, 520px -320px, -390px 500px; }
+}
+@keyframes aira-light-beam {
+  0% { transform: translate3d(-12%,0,0) rotate(-8deg); opacity: .16; }
+  50% { opacity: .42; }
+  100% { transform: translate3d(12%,0,0) rotate(-8deg); opacity: .2; }
+}
+/* The welcome mark behaves like a floating 3D object. */
+#welcome .hero-logo {
+  transform-style: preserve-3d;
+  will-change: transform, filter;
+  animation: aira-logo-hover 5.8s ease-in-out infinite, aira-logo-glow 4.2s ease-in-out infinite alternate;
+}
+@keyframes aira-logo-glow {
+  from { filter: drop-shadow(0 9px 12px rgba(0,0,0,.7)) drop-shadow(0 0 17px rgba(137,91,255,.55)); }
+  to { filter: drop-shadow(0 12px 18px rgba(0,0,0,.62)) drop-shadow(0 0 34px rgba(137,91,255,.98)) drop-shadow(0 0 54px rgba(65,186,255,.24)); }
+}
+#welcome::before { animation: aira-orb-float 6.2s ease-in-out infinite, aira-orb-breathe 5s ease-in-out infinite alternate; }
+@keyframes aira-orb-breathe {
+  from { box-shadow: 0 0 28px rgba(137,91,255,.35), inset -12px -12px 28px rgba(8,3,25,.85), inset 10px 8px 22px rgba(255,255,255,.14); }
+  to { box-shadow: 0 0 58px rgba(137,91,255,.72), 0 0 92px rgba(67,162,255,.18), inset -12px -12px 28px rgba(8,3,25,.85), inset 10px 8px 22px rgba(255,255,255,.24); }
+}
+#welcome::after { animation: aira-orbit 13s linear infinite; }
+/* Slow ambient motion across the interface, never blocking clicks. */
+.sidebar::after {
+  content: ""; position: absolute; inset: -35% auto -35% -2px; width: 2px;
+  background: linear-gradient(transparent, rgba(150,102,255,.8), rgba(111,221,255,.65), transparent);
+  opacity: .5; filter: blur(2px); pointer-events: none;
+  animation: aira-sidebar-scan 8s ease-in-out infinite;
+}
+@keyframes aira-sidebar-scan { 0%,100% { transform: translateY(-38%); opacity: .15; } 50% { transform: translateY(38%); opacity: .75; } }
+.nav-item, .side-link, .chip, .feature, .mode-card, .card, .composer, .topbar .ghost {
+  backface-visibility: hidden;
+}
+.nav-item { transition: transform .35s cubic-bezier(.2,.8,.2,1), background .35s ease, box-shadow .35s ease; }
+.nav-item:hover { transform: translateX(5px) translateZ(8px); box-shadow: 0 0 22px rgba(133,83,255,.18); }
+#welcome .feature { animation: aira-feature-hover 7s ease-in-out infinite; }
+#welcome .feature:nth-child(2) { animation-delay: -1.4s; }
+#welcome .feature:nth-child(3) { animation-delay: -2.8s; }
+#welcome .feature:nth-child(4) { animation-delay: -4.2s; }
+@keyframes aira-feature-hover { 0%,100% { translate: 0 0; } 50% { translate: 0 -4px; } }
+#view-home .mode-card:nth-child(3n+1) { animation: aira-card-float 8s ease-in-out infinite; }
+#view-home .mode-card:nth-child(3n+2) { animation: aira-card-float 9s ease-in-out -2.5s infinite; }
+#view-home .mode-card:nth-child(3n) { animation: aira-card-float 10s ease-in-out -4s infinite; }
+@keyframes aira-card-float { 0%,100% { translate: 0 0; } 50% { translate: 0 -3px; } }
+.composer { transition: box-shadow .4s ease, transform .4s ease, border-color .4s ease; }
+.composer:focus-within { transform: perspective(1000px) translateY(-3px) translateZ(18px); border-color: rgba(173,137,255,.72); box-shadow: 0 18px 45px rgba(0,0,0,.38), 0 0 32px rgba(125,79,255,.24), inset 0 1px 0 rgba(255,255,255,.12); }
+.primary, .send { position: relative; overflow: hidden; }
+.primary::after, .send::after {
+  content: ""; position: absolute; inset: -40% auto -40% -70%; width: 38%;
+  transform: skewX(-22deg); background: linear-gradient(90deg, transparent, rgba(255,255,255,.34), transparent);
+  animation: aira-button-shine 5.5s ease-in-out infinite; pointer-events: none;
+}
+@keyframes aira-button-shine { 0%,60% { left: -70%; } 100% { left: 145%; } }
+/* 4K and ultrawide screens: retain crisp spacing and prevent a tiny centered UI. */
+@media (min-width: 2560px) {
+  html { font-size: clamp(16px, .48vw, 20px); }
+  .shell { grid-template-columns: clamp(280px, 15vw, 420px) minmax(0,1fr); }
+  .sidebar { padding: clamp(24px, 1.4vw, 48px); }
+  .main { min-width: 0; }
+  .topbar { min-height: clamp(76px, 4vw, 110px); padding-inline: clamp(32px, 2.4vw, 88px); }
+  .page-wrap { width: min(100% - clamp(56px, 5vw, 180px), 2300px); margin-inline: auto; }
+  .hero-card { min-height: clamp(430px, 29vw, 760px); padding: clamp(54px, 4vw, 120px); }
+  .hero-copy::before { font-size: clamp(76px, 5.2vw, 160px); }
+  .hero-copy h2 { font-size: clamp(34px, 2.2vw, 64px); }
+  .hero-card .linkbtn { font-size: clamp(16px, .8vw, 24px); padding: 18px 34px; }
+  #welcome { min-height: min(68vh, 1120px); padding-top: clamp(70px, 5vh, 150px); }
+  #welcome .hero-logo { width: clamp(120px, 7vw, 220px); height: auto; }
+  #welcome h2 { font-size: clamp(42px, 3vw, 92px); }
+  #welcome .sub, #welcome > p { font-size: clamp(17px, .95vw, 28px); }
+  #welcome::before { width: clamp(420px, 27vw, 850px); height: clamp(420px, 27vw, 850px); }
+  #welcome::after { width: clamp(620px, 42vw, 1280px); height: clamp(150px, 9vw, 280px); }
+  #welcome .features { gap: clamp(18px, 1.4vw, 42px); }
+  #welcome .feature, .card, .mode-card { padding: clamp(22px, 1.5vw, 44px); }
+  .chat { max-width: min(100%, 2100px); }
+  .bottom { width: min(100% - 64px, 2100px); margin-inline: auto; }
+}
+@media (min-width: 3840px) {
+  html { font-size: 20px; }
+  .page-wrap { max-width: 2600px; }
+  .chat, .bottom { max-width: 2400px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before, body::after, .sidebar::after, #welcome .feature,
+  #view-home .mode-card, .primary::after, .send::after { animation: none !important; }
+  .nav-item, .composer { transition: none !important; }
+}
