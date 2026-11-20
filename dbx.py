@@ -5,12 +5,20 @@ whether it talks to a local file or to Turso. Only needs the `requests` library.
 """
 import base64
 import sqlite3
+import time
 
 import requests
 
+LOG = None   # app.py sets this to a function(level, event, **fields) so retries show up in the logs
+
 
 class TursoError(Exception):
-    pass
+    """kind: network (cannot reach / timeout), busy (429/5xx), auth (401/403), url (404/400), sql (a command failed)."""
+
+    def __init__(self, message, kind="sql", status=None):
+        super().__init__(message)
+        self.kind = kind
+        self.status = status
 
 
 class Cursor:
@@ -58,13 +66,50 @@ def _value(cell):
 
 class Turso:
     def __init__(self, url, token, timeout=15):
-        url = url.strip().rstrip("/")
+        url = url.strip().strip("\"'").rstrip("/")
+        token = token.strip().strip("\"'")
         if url.startswith("libsql://"):
             url = "https://" + url[len("libsql://"):]
+        elif url.startswith("wss://"):
+            url = "https://" + url[len("wss://"):]
         self.endpoint = url + "/v2/pipeline"
-        self.http = requests.Session()
-        self.http.headers.update({"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+        self.token = token
         self.timeout = timeout
+        self.http = None
+        self._new_session()
+
+    def _new_session(self):
+        """A fresh connection. A connection kept from an earlier request can be dead (the server frozen or
+        Turso closed it), so after any network error we never reuse it."""
+        self.http = requests.Session()
+        self.http.headers.update({"Authorization": "Bearer " + self.token, "Content-Type": "application/json"})
+
+    def _post(self, payload, read_only):
+        """POST with up to 3 tries. Retries only what is safe: network errors and 429/502/503/504."""
+        last = None
+        for attempt in range(3):
+            try:
+                reply = self.http.post(self.endpoint, json=payload, timeout=self.timeout)
+            except requests.exceptions.RequestException as error:
+                self._new_session()
+                last = TursoError(f"could not reach the database ({type(error).__name__})", "network")
+                # A timeout while waiting for the answer may mean the command already ran, so only repeat reads.
+                waiting = isinstance(error, requests.exceptions.Timeout) and not isinstance(error, requests.exceptions.ConnectTimeout)
+                if attempt < 2 and (read_only or not waiting):
+                    self._note(attempt, "network", type(error).__name__)
+                    time.sleep(0.25 * (attempt + 1))
+                    continue
+                raise last
+            if reply.status_code in (429, 502, 503, 504) and attempt < 2:
+                self._note(attempt, "busy", reply.status_code)
+                time.sleep(0.4 * (attempt + 1))
+                continue
+            return reply
+        raise last
+
+    def _note(self, attempt, kind, detail):
+        if LOG:
+            LOG("warn", "db_retry", attempt=attempt + 1, kind=kind, detail=str(detail))
 
     def _run(self, statements):
         requests_list = [
@@ -72,26 +117,33 @@ class Turso:
             for sql, params in statements
         ]
         requests_list.append({"type": "close"})
-        try:
-            reply = self.http.post(self.endpoint, json={"requests": requests_list}, timeout=self.timeout)
-        except requests.exceptions.RequestException as error:
-            raise TursoError(f"could not reach the database: {error}")
+        read_only = all(sql.lstrip().upper().startswith(("SELECT", "PRAGMA")) for sql, _ in statements)
+        reply = self._post({"requests": requests_list}, read_only)
         if reply.status_code != 200:
-            raise TursoError(f"database answered {reply.status_code}: {reply.text[:200]}")
-        results = reply.json().get("results", [])
+            body = reply.text[:160].replace(self.token, "***") if self.token else reply.text[:160]
+            if reply.status_code in (401, 403):
+                raise TursoError(f"database refused the login (HTTP {reply.status_code}): {body}", "auth", reply.status_code)
+            if reply.status_code in (400, 404):
+                raise TursoError(f"database address not accepted (HTTP {reply.status_code}): {body}", "url", reply.status_code)
+            raise TursoError(f"database answered HTTP {reply.status_code}: {body}", "busy" if reply.status_code >= 500 or reply.status_code == 429 else "sql", reply.status_code)
+        try:
+            results = reply.json().get("results", [])
+        except ValueError:
+            raise TursoError("the database sent an unreadable answer", "busy", reply.status_code)
         cursors = []
         for item in results[: len(statements)]:
             if item.get("type") == "error":
                 message = (item.get("error") or {}).get("message", "database error")
-                if "constraint" in message.lower() or "unique" in message.lower():
+                lowered = message.lower()
+                if "constraint failed" in lowered or "unique constraint" in lowered:
                     raise sqlite3.IntegrityError(message)
-                raise TursoError(message)
+                raise TursoError(message, "sql")
             result = item["response"]["result"]
             rows = [tuple(_value(cell) for cell in row) for row in result.get("rows", [])]
             last = result.get("last_insert_rowid")
             cursors.append(Cursor(rows, result.get("affected_row_count", 0) or 0, int(last) if last is not None else None))
         if len(cursors) != len(statements):
-            raise TursoError("the database sent an incomplete answer")
+            raise TursoError("the database sent an incomplete answer", "busy")
         return cursors
 
     def execute(self, sql, params=()):
