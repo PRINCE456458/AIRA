@@ -1,0 +1,64 @@
+AIRA - FIX: "Aira had a problem saving or loading data. Please try again in a moment."
+====================================================================================
+
+WHAT THAT MESSAGE MEANS
+  It was a catch-all. ANY unexpected error in ANY /api/ route produced it: wrong or expired Turso
+  token, Turso briefly down, a dead connection, a missing column, even a bug in the code. The log only
+  said "[error] TursoError: ..." with no route, no id and no traceback, so the cause could not be told apart.
+
+CAUSES FOUND (reproduced with a Turso-style test server)
+  1. Stale connection, no retry. On Vercel a sleeping instance keeps a connection that Turso has closed;
+     the first request afterwards failed, and the next one worked ("try again in a moment").
+  2. Race on deploy. Several Vercel instances starting together on an older database tried to add the same
+     new column; 2-5 of 6 crashed with "duplicate column name".
+  3. Slow cold start: 20 separate round trips to Turso on every cold start (seconds if Turso is far away).
+  4. Wrong/expired token, wrong URL, Turso outage: all looked identical to visitors and in the log.
+  I cannot see your Vercel logs or Turso account, so I cannot tell which of these hit YOU. The new logging
+  and /status tell you in under a minute (see below).
+
+WHAT CHANGED
+  dbx.py   retries up to 3 times: network errors and HTTP 429/502/503/504; uses a fresh connection after any
+           network error. Writes whose answer never arrived (timeout) are NOT repeated, so nothing is saved twice.
+           Errors now have a type: network, busy, auth, url, sql. Cleans quotes/spaces from URL and token.
+  app.py   * every error gets a short ref (example: 3fa91c0b). Visitors see "... (ref 3fa91c0b)"; the same
+             ref is in the X-Request-Id header and in the log.
+           * the log line (JSON, in Vercel > Logs) has: ref, route, method, category, exception, message,
+             seconds, traceback. Secrets are removed.
+           * database upgrade is safe to run twice and by several instances at once.
+           * cold start: 1 round trip when the database is already up to date (was 20). The schema version
+             is stored in the database and changes by itself when a table or column is added.
+           * /status now also shows: tables present, database speed, the exact failure category with advice
+             (no secrets), and the last database problem seen by that server instance.
+  diag.py  NEW: secret removal, error categories, logging.
+  Not changed: the screens, your data, the database, the other features. No new environment variables.
+  Existing data is untouched: this only changes how the app talks to the database and reports problems.
+
+HOW TO TEST LOCALLY
+  1. python app.py   (with your .env), open http://127.0.0.1:5000/status  -> Database: OK, tables, speed.
+  2. Break it on purpose: change one letter of TURSO_AUTH_TOKEN in .env, restart, open /status.
+     You should see  "Database - NOT working (auth)"  and advice. Put the right token back. (The token itself
+     is never shown.)
+HOW TO TEST ON VERCEL
+  1. Upload the ZIP contents to GitHub (never .env); Vercel redeploys.
+  2. Open https://aira-ai-sand.vercel.app/status . Database must say OK, tables "all present".
+  3. If the old message appears again, it now ends with (ref xxxxxxxx). In Vercel: your project > Logs,
+     search for that ref (or for  request_failed). The "category" field tells you the fix:
+        auth     TURSO_AUTH_TOKEN wrong/expired -> create a new token for THIS database, update in Vercel, Redeploy
+        url      TURSO_DATABASE_URL wrong -> must look like libsql://your-db-your-user.turso.io
+        network  could not reach Turso (outage or timeout) -> check the Turso dashboard; try again
+        busy     Turso rate-limited or restarting -> check Turso limits/outage
+        sql      Turso refused a command -> send me the "message" and "path" fields of that log line
+        code     a bug in Aira, not the database -> send me the "trace" field of that log line
+  4. If /status says "Database speed" is slow (400 ms+): in Turso, use a database in the region closest to your
+     Vercel functions (Vercel's default is Washington DC, iad1), or set Vercel's Function Region near Turso.
+  Never paste tokens in chat. Log lines never contain them; if you share a log line, still glance at it first.
+
+TESTS RUN (fake Turso server + SQLite; I cannot reach your real Turso or Vercel)
+  44 checks on the Turso-style server and 23 on SQLite: old database upgrade keeps users/chats/feedback;
+  1-round-trip cold start; 6 simultaneous cold starts x4 with no failures; bad token / 503 / dropped
+  connection / timeout behaviour (retries counted); no duplicate writes; refs match headers and logs;
+  tokens never appear in logs, responses or /status; code bugs are told apart from database problems;
+  and a smoke test of login, chats, projects, tasks, expenses, memory, settings, feedback, admin gate,
+  logout and account deletion.
+  Not re-run: my earlier large browser suites (they were lost when this session restarted). The screens
+  were not changed, only the error text.
