@@ -1,11 +1,17 @@
+
 // AIRA Vision AI — Local Face Analysis
 (() => {
   "use strict";
 
   const V = window.AiraViews = window.AiraViews || {};
 
-  const MP_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
-  const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+  const CDN_LIST = [
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14",
+    "https://unpkg.com/@mediapipe/tasks-vision@0.10.14"
+  ];
+
+  const MODEL =
+    "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
@@ -13,6 +19,40 @@
     if (text !== undefined) n.textContent = text;
     return n;
   };
+
+  async function loadVision() {
+    let lastError;
+
+    for (const cdn of CDN_LIST) {
+      try {
+        const vision = await import(cdn + "/vision_bundle.mjs");
+
+        const files = await vision.FilesetResolver.forVisionTasks(
+          cdn + "/wasm"
+        );
+
+        return { vision, files };
+      } catch (error) {
+        lastError = error;
+        console.warn("AIRA Vision CDN failed:", cdn, error);
+      }
+    }
+
+    throw lastError || new Error("Could not load MediaPipe.");
+  }
+
+  async function createLandmarker(vision, files, delegate) {
+    return vision.FaceLandmarker.createFromOptions(files, {
+      baseOptions: {
+        modelAssetPath: MODEL,
+        delegate
+      },
+      runningMode: "VIDEO",
+      numFaces: 1,
+      outputFaceBlendshapes: false,
+      outputFacialTransformationMatrixes: false
+    });
+  }
 
   V.vision = {
     mount() {},
@@ -98,15 +138,17 @@
       let raf = 0;
       let lastVideoTime = -1;
       let active = false;
+      let cleaned = false;
 
       const setStatus = (message, error = false) => {
         status.textContent = message;
         status.classList.toggle("error", error);
       };
 
-      function stopCamera() {
+      function stopCamera(showMessage = true) {
         active = false;
-        cancelAnimationFrame(raf);
+
+        if (raf) cancelAnimationFrame(raf);
         raf = 0;
 
         if (stream) {
@@ -127,7 +169,7 @@
         roll.textContent = "—";
         eyes.textContent = "—";
 
-        setStatus("Camera stopped.");
+        if (showMessage) setStatus("Camera stopped.");
       }
 
       function draw(landmarks) {
@@ -145,8 +187,6 @@
 
         if (!landmarks || !mesh.checked) return;
 
-        const points = landmarks;
-
         ctx.strokeStyle = "rgba(184,116,255,.75)";
         ctx.lineWidth = Math.max(0.7, w / 1000);
 
@@ -161,7 +201,7 @@
           ctx.beginPath();
 
           group.forEach((index, j) => {
-            const p = points[index];
+            const p = landmarks[index];
             if (!p) return;
 
             const x = p.x * w;
@@ -177,7 +217,7 @@
 
         ctx.fillStyle = "rgba(103,220,255,.9)";
 
-        points.forEach((p, i) => {
+        landmarks.forEach((p, i) => {
           if (i % 3 === 0) {
             ctx.beginPath();
             ctx.arc(
@@ -222,13 +262,12 @@
               ? "Turned left"
               : "Turned right";
 
-        roll.textContent =
-          (
-            Math.atan2(
-              right.y - left.y,
-              right.x - left.x
-            ) * 180 / Math.PI
-          ).toFixed(1) + "°";
+        roll.textContent = (
+          Math.atan2(
+            right.y - left.y,
+            right.x - left.x
+          ) * 180 / Math.PI
+        ).toFixed(1) + "°";
 
         if (lm[468] && lm[473] && p(133) && p(362)) {
           const leftRatio =
@@ -293,29 +332,29 @@
             throw new Error("Camera requires HTTPS or localhost.");
           }
 
-          const vision = await import(
-            MP_CDN + "/vision_bundle.mjs"
-          );
+          setStatus("Connecting to MediaPipe...");
 
-          const files =
-            await vision.FilesetResolver.forVisionTasks(
-              MP_CDN + "/wasm"
-            );
+          const { vision, files } = await loadVision();
 
-          landmarker =
-            await vision.FaceLandmarker.createFromOptions(
+          setStatus("Loading face analysis model...");
+
+          try {
+            landmarker = await createLandmarker(
+              vision,
               files,
-              {
-                baseOptions: {
-                  modelAssetPath: MODEL,
-                  delegate: "GPU"
-                },
-                runningMode: "VIDEO",
-                numFaces: 1,
-                outputFaceBlendshapes: false,
-                outputFacialTransformationMatrixes: false
-              }
+              "GPU"
             );
+          } catch (gpuError) {
+            console.warn("GPU unavailable, trying CPU:", gpuError);
+
+            landmarker = await createLandmarker(
+              vision,
+              files,
+              "CPU"
+            );
+          }
+
+          setStatus("Requesting camera permission...");
 
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
@@ -327,35 +366,46 @@
           });
 
           video.srcObject = stream;
-
           await video.play();
 
           placeholder.hidden = true;
           active = true;
+          lastVideoTime = -1;
+
           stop.disabled = false;
 
           setStatus("AIRA Vision AI is active.");
           loop();
 
         } catch (error) {
+          console.error("AIRA Vision error:", error);
+
           if (stream) {
             stream.getTracks().forEach(t => t.stop());
           }
 
           stream = null;
           video.srcObject = null;
+
+          if (landmarker) {
+            landmarker.close();
+            landmarker = null;
+          }
+
           start.disabled = false;
 
           setStatus(
             error.name === "NotAllowedError"
               ? "Camera permission denied. Allow camera access and retry."
-              : error.message,
+              : "Error: " + (error.message || "Could not start Vision AI."),
             true
           );
         }
       });
 
-      stop.addEventListener("click", stopCamera);
+      stop.addEventListener("click", () => {
+        stopCamera();
+      });
 
       mesh.addEventListener("change", () => {
         if (!mesh.checked) {
@@ -364,13 +414,18 @@
       });
 
       const cleanup = () => {
-        stopCamera();
-        document.removeEventListener("aira:route", onHide);
+        if (cleaned) return;
+        cleaned = true;
+
+        stopCamera(false);
 
         if (landmarker) {
           landmarker.close();
           landmarker = null;
         }
+
+        document.removeEventListener("aira:route", onHide);
+        window.removeEventListener("pagehide", cleanup);
       };
 
       const onHide = () => {
@@ -380,7 +435,7 @@
       };
 
       document.addEventListener("aira:route", onHide);
-      window.addEventListener("pagehide", cleanup, { once: true });
+      window.addEventListener("pagehide", cleanup);
     }
   };
 })();
