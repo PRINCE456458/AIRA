@@ -6,7 +6,7 @@
     ["Create", [["write", "Writing Studio", "i-pen"], ["image", "Image Studio", "i-image"], ["voice", "Voice Studio", "i-mic"], ["files", "PDF & DOCX Creator", "i-doc"]]],
     ["Learn", [["research", "Research", "i-search"], ["docs", "PDF & Notes", "i-doc"], ["planner", "Study Planner", "i-book"]]],
     ["Organise", [["tasks", "Tasks", "i-check"], ["reminders", "Reminders", "i-bell"], ["expenses", "Expenses", "i-wallet"], ["library", "Library", "i-folder"], ["memory", "Memory", "i-brain"]]],
-    ["More", [["toolbox", "Toolbox", "i-plug"], ["settings", "Settings", "i-cog"], ["pro", "Pro / Subscription", "i-star"], ["help", "Help & Support", "i-help"]]],
+   ["More", [["toolbox", "Toolbox", "i-plug"], ["vision", "AIRA Vision AI", "i-image"], ["settings", "Settings", "i-cog"], ["pro", "Pro / Subscription", "i-star"], ["help", "Help & Support", "i-help"]]],
   ];
   const VIEWS = {};
   NAV.forEach(([, items]) => items.forEach(([id, name]) => { VIEWS[id] = name; }));
