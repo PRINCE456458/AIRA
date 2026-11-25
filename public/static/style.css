@@ -446,3 +446,116 @@ a.src { display: block; margin: 4px 0; }
 @media(prefers-reduced-motion:reduce){.aira-quick-actions button{transition:none}}
 
 .aira-orb-stage.aira-webgl-ready .aira-orb-fallback{opacity:0;transition:opacity .35s ease}
+/* AIRA VISION AI */
+
+.vision-shell {
+  display: grid;
+  gap: 16px;
+  max-width: 1100px;
+}
+
+.vision-stage {
+  position: relative;
+  min-height: 300px;
+  aspect-ratio: 16 / 9;
+  max-height: 620px;
+  overflow: hidden;
+  border: 1px solid rgba(157,78,221,.35);
+  border-radius: 18px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(92,35,145,.22),
+    #07030f 70%
+  );
+  display: grid;
+  place-items: center;
+}
+
+.vision-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.vision-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: scaleX(-1);
+}
+
+.vision-placeholder {
+  position: absolute;
+  color: var(--muted,#a897c9);
+  padding: 20px;
+  text-align: center;
+}
+
+.vision-placeholder[hidden] {
+  display: none;
+}
+
+.vision-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vision-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted,#a897c9);
+  font-size: 14px;
+}
+
+.vision-status {
+  margin: 0;
+  color: var(--muted,#a897c9);
+  font-size: 14px;
+}
+
+.vision-status.error {
+  color: #ff8b9b;
+}
+
+.vision-metrics {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 10px;
+}
+
+.vision-metric {
+  padding: 14px;
+  border: 1px solid rgba(157,78,221,.25);
+  border-radius: 14px;
+  background: rgba(28,16,54,.48);
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.vision-metric strong {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.vision-note {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media(max-width:650px) {
+  .vision-stage {
+    min-height: 230px;
+  }
+
+  .vision-metrics {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
