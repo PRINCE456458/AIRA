@@ -14,10 +14,10 @@
 <meta name="theme-color" content="#07030f">
 <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<link rel="stylesheet" href="static/style.css">
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<div id="nofile" class="nofile">This page must be opened through the server. In your terminal run: python app.py  and then open http://127.0.0.1:5000</div>
+<div id="nofile" class="nofile">This page must be opened through the server. In your terminal run: python app.py and then open http://127.0.0.1:5000</div>
 <div id="scrim" class="scrim" hidden></div>
 <aside id="drawer" class="drawer" aria-label="Saved chats" hidden>
   <div class="drawer-head"><strong>Your chats</strong><button id="drawerClose" class="ghost icon" type="button" aria-label="Close">&times;</button></div>
@@ -54,7 +54,7 @@
 <div class="shell" id="shell">
   <aside id="sidebar" class="sidebar" aria-label="Main menu">
     <div class="side-brand">
-      <img class="logoimg" src="static/logo.svg" alt="" width="36" height="36">
+      <img class="logoimg" src="/static/logo.svg" alt="" width="36" height="36">
       <div class="side-text"><strong>Aira AI</strong><span class="tag">Your Personal AI</span></div>
     </div>
     <nav id="sideNav" class="side-nav" aria-label="Sections"></nav>
@@ -76,7 +76,7 @@
 
     <section id="view-home" class="view page-wrap" hidden aria-label="Home">
       <div class="hero-card">
-        <img class="hero-mini" src="static/logo.svg" alt="" width="72" height="72">
+        <img class="hero-mini" src="/static/logo.svg" alt="" width="72" height="72">
         <div class="hero-copy">
           <p class="sub">Think &middot; Ask &middot; Create &middot; Explore</p>
           <h2 id="homeHello">Welcome to Aira</h2>
@@ -174,58 +174,58 @@
           <select id="projectSel" aria-label="Project for this chat"><option value="">No project</option></select>
         </label>
       </div>
-<main id="chat" class="chat" aria-live="polite">
-    <section id="welcome" class="welcome hero">
-      <div class="aira-orb-stage" aria-label="AIRA cosmic AI core">
-        <span class="aira-orbit aira-orbit-one" aria-hidden="true"></span>
-        <span class="aira-orbit aira-orbit-two" aria-hidden="true"></span>
-        <span class="aira-orbit aira-orbit-three" aria-hidden="true"></span>
-        <span class="aira-orb-aura" aria-hidden="true"></span>
-        <div class="aira-planet-core" role="img" aria-label="AIRA cosmic AI planet">
-          <span class="planet-land" aria-hidden="true"></span>
-          <span class="planet-cloud" aria-hidden="true"></span>
-          <span class="planet-flare" aria-hidden="true"></span>
-        </div>
-      </div>
-      <h2>Aira AI</h2>
-      <p class="sub">Think &middot; Ask &middot; Create &middot; Explore</p>
-      <p>Your free personal AI. Chat in English or Hinglish.</p>
-      <div class="features">
-        <div class="feature"><b>Chat</b><span>Ask anything</span></div>
-        <div class="feature" data-feature="search"><b>Search</b><span>Web answers with sources</span></div>
-        <div class="feature" data-feature="image"><b>Photos</b><span>Understand pictures</span></div>
-        <div class="feature"><b>Builder</b><span>Make a website</span></div>
-      </div>
-      <div class="chips" id="chips">
-        <button type="button" class="chip">Explain how the internet works in simple words</button>
-        <button type="button" class="chip">Write a short, funny birthday message for my friend</button>
-        <button type="button" class="chip">Give me a 3-day plan to learn Python basics</button>
-        <button type="button" class="chip">Mujhe ek acchi career advice do after 12th</button>
-      </div>
-    </section>
-  </main>
+      <main id="chat" class="chat" aria-live="polite">
+        <section id="welcome" class="welcome hero">
+          <div class="aira-orb-stage" aria-label="AIRA cosmic AI core">
+            <span class="aira-orbit aira-orbit-one" aria-hidden="true"></span>
+            <span class="aira-orbit aira-orbit-two" aria-hidden="true"></span>
+            <span class="aira-orbit aira-orbit-three" aria-hidden="true"></span>
+            <span class="aira-orb-aura" aria-hidden="true"></span>
+            <div class="aira-planet-core" role="img" aria-label="AIRA cosmic AI planet">
+              <span class="planet-land" aria-hidden="true"></span>
+              <span class="planet-cloud" aria-hidden="true"></span>
+              <span class="planet-flare" aria-hidden="true"></span>
+            </div>
+          </div>
+          <h2>Aira AI</h2>
+          <p class="sub">Think &middot; Ask &middot; Create &middot; Explore</p>
+          <p>Your free personal AI. Chat in English or Hinglish.</p>
+          <div class="features">
+            <div class="feature"><b>Chat</b><span>Ask anything</span></div>
+            <div class="feature" data-feature="search"><b>Search</b><span>Web answers with sources</span></div>
+            <div class="feature" data-feature="image"><b>Photos</b><span>Understand pictures</span></div>
+            <div class="feature"><b>Builder</b><span>Make a website</span></div>
+          </div>
+          <div class="chips" id="chips">
+            <button type="button" class="chip">Explain how the internet works in simple words</button>
+            <button type="button" class="chip">Write a short, funny birthday message for my friend</button>
+            <button type="button" class="chip">Give me a 3-day plan to learn Python basics</button>
+            <button type="button" class="chip">Mujhe ek acchi career advice do after 12th</button>
+          </div>
+        </section>
+      </main>
 
-  <footer class="bottom">
-    <div class="controls">
-      <label class="sr" for="mode">Mode</label>
-      <select id="mode" aria-label="Mode"></select>
-      <label id="searchWrap" class="toggle" hidden><input type="checkbox" id="searchOn"> Search web</label>
-      <button id="attachBtn" class="ghost" type="button" hidden>Photo</button>
-      <input id="fileInput" type="file" accept="image/*" hidden>
-      <span id="thumbWrap" class="thumbwrap" hidden><img id="thumb" alt="Attached photo"><button id="thumbX" type="button" aria-label="Remove photo">&times;</button></span>
-    </div>
-    <form id="form" class="composer" autocomplete="off">
-      <textarea id="input" rows="1" maxlength="2000" placeholder="Message Aira..." aria-label="Message"></textarea>
-      <button id="send" class="send" type="submit" aria-label="Send">Send</button>
-      <button id="stop" class="send stop" type="button" aria-label="Stop" hidden>Stop</button>
-    </form>
-    <p class="note">
-      <span id="left"></span>
-      Aira is an AI and can make mistakes. Don't share passwords or private details.
-      <a href="/privacy">Privacy</a>
-      <a id="instaLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Instagram</a>
-    </p>
-    </footer>
+      <footer class="bottom">
+        <div class="controls">
+          <label class="sr" for="mode">Mode</label>
+          <select id="mode" aria-label="Mode"></select>
+          <label id="searchWrap" class="toggle" hidden><input type="checkbox" id="searchOn"> Search web</label>
+          <button id="attachBtn" class="ghost" type="button" hidden>Photo</button>
+          <input id="fileInput" type="file" accept="image/*" hidden>
+          <span id="thumbWrap" class="thumbwrap" hidden><img id="thumb" alt="Attached photo"><button id="thumbX" type="button" aria-label="Remove photo">&times;</button></span>
+        </div>
+        <form id="form" class="composer" autocomplete="off">
+          <textarea id="input" rows="1" maxlength="2000" placeholder="Message Aira..." aria-label="Message"></textarea>
+          <button id="send" class="send" type="submit" aria-label="Send">Send</button>
+          <button id="stop" class="send stop" type="button" aria-label="Stop" hidden>Stop</button>
+        </form>
+        <p class="note">
+          <span id="left"></span>
+          Aira is an AI and can make mistakes. Don't share passwords or private details.
+          <a href="/privacy">Privacy</a>
+          <a id="instaLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Instagram</a>
+        </p>
+      </footer>
     </section>
   </div>
 </div>
@@ -264,6 +264,7 @@
     </div>
   </form>
 </dialog>
+
 <dialog id="projectDialog" class="dialog">
   <form id="projectForm" method="dialog">
     <h3 id="projectTitle">New project</h3>
@@ -289,12 +290,12 @@
     </div>
     <p id="authError" class="status bad" role="alert"></p>
     <div id="passBlock">
-    <label for="authEmail">Email</label>
-    <input id="authEmail" type="email" maxlength="120" autocomplete="email" required>
-    <label for="authPass">Password</label>
-    <input id="authPass" type="password" minlength="8" maxlength="100" autocomplete="current-password" required>
-    <p class="muted small">There is no password reset by email, so remember your password.</p>
-    <p id="authStatus" class="status" role="status"></p>
+      <label for="authEmail">Email</label>
+      <input id="authEmail" type="email" maxlength="120" autocomplete="email" required>
+      <label for="authPass">Password</label>
+      <input id="authPass" type="password" minlength="8" maxlength="100" autocomplete="current-password" required>
+      <p class="muted small">There is no password reset by email, so remember your password.</p>
+      <p id="authStatus" class="status" role="status"></p>
     </div>
     <div class="row">
       <button type="button" id="authSwitch" class="ghost">Create account</button>
@@ -327,12 +328,13 @@
   <div class="pvbar"><span>Preview (runs in a safe sandbox)</span><button type="button" id="pvClose" class="ghost">Close</button></div>
   <div id="pvHolder" class="pvholder"></div>
 </dialog>
-<script src="static/app.js"></script>
-<script src="static/kit.js"></script>
-<script src="static/views1.js"></script>
-<script src="static/views2.js"></script>
-<script src="static/dashboard.js"></script>
-<script src="static/projects.js"></script>
-<script src="static/cosmic-motion.js" defer></script>
+
+<script src="/static/app.js"></script>
+<script src="/static/kit.js"></script>
+<script src="/static/views1.js"></script>
+<script src="/static/views2.js"></script>
+<script src="/static/dashboard.js"></script>
+<script src="/static/projects.js"></script>
+<script src="/static/cosmic-motion.js" defer></script>
 </body>
 </html>
