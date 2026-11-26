@@ -1012,3 +1012,32 @@ body:not(.aira-hologram-active) .guardian-check{border-radius:14px}
 .module-error p{line-height:1.6;overflow-wrap:anywhere}
 .module-error .primary{margin-top:10px}
 .module-loading{min-height:180px}
+
+
+/* FIX: keep the actual app interface above the decorative particle canvas.
+   The cosmic canvas is fixed at z-index:0; without a positioned shell,
+   normal-flow module content can be painted underneath it. */
+#shell.shell {
+  position:relative;
+  z-index:1;
+  isolation:isolate;
+}
+#shell.shell > .main {
+  position:relative;
+  z-index:1;
+  min-width:0;
+}
+#shell.shell > .sidebar {
+  position:relative;
+  z-index:2;
+}
+#shell.shell > .main > .view:not([hidden]) {
+  position:relative;
+  z-index:1;
+  display:block;
+  flex:1 1 auto;
+  min-height:0;
+}
+#shell.shell > .main > .view[hidden] {
+  display:none!important;
+}
