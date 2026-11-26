@@ -96,11 +96,39 @@
     return sec;
   }
   function showModule(name, arg) {
-    const sec = ensureSection(name), mod = window.AiraViews[name];
+    const sec = ensureSection(name);
+    const mod = (window.AiraViews || {})[name];
     const who = (state() && state().user) || "";
-    if (!sec.dataset.mounted) { mod.mount(sec); sec.dataset.mounted = "1"; }
-    sec.dataset.user = who;
-    mod.show(sec, arg);
+    try {
+      if (!mod || typeof mod.show !== "function") {
+        throw new Error("Module registration missing: " + name);
+      }
+      if (!sec.dataset.mounted) {
+        if (typeof mod.mount === "function") mod.mount(sec);
+        sec.dataset.mounted = "1";
+      }
+      sec.dataset.user = who;
+      mod.show(sec, arg);
+    } catch (error) {
+      console.error("[AIRA] Module render failed:", name, error);
+      sec.replaceChildren();
+      sec.className = "view page-wrap aira-module-error";
+      sec.hidden = false;
+      const card = document.createElement("section");
+      card.className = "card";
+      const heading = document.createElement("h2");
+      heading.textContent = "AIRA could not open " + (VIEWS[name] || name);
+      const detail = document.createElement("pre");
+      detail.className = "aira-module-error-detail";
+      detail.textContent = error && error.stack ? error.stack : String(error);
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "primary";
+      retry.textContent = "Try again";
+      retry.addEventListener("click", () => showModule(name, arg));
+      card.append(heading, detail, retry);
+      sec.appendChild(card);
+    }
   }
   function route() {
     const m = location.hash.match(/^#\/(\w+)(?:\/([a-f0-9]{16}))?/) || [];
