@@ -1034,8 +1034,6 @@ body:not(.aira-hologram-active) .guardian-check{border-radius:14px}
 #shell.shell > .main > .view:not([hidden]) {
   position:relative;
   z-index:1;
-  display:block;
-  flex:1 1 auto;
   min-height:0;
 }
 #shell.shell > .main > .view[hidden] {
