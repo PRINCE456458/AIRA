@@ -626,3 +626,45 @@ body.aira-hologram-active .aira-holo-page {
 body.aira-hologram-active .aira-holo-canvas {
   z-index: 2;
 }
+
+
+/* AIRA hologram: expanded portrait stage + live voice/interview console */
+.aira-holo-main{grid-template-columns:minmax(0,1.55fr) minmax(330px,.8fr);max-width:1680px;gap:clamp(16px,3vw,44px)}
+.aira-holo-panel{max-width:470px;max-height:calc(100dvh - 126px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(145,117,220,.45) transparent}
+.aira-holo-scene{min-height:440px}
+.aira-holo-talk{margin-top:15px;padding:13px;border:1px solid rgba(119,175,255,.2);border-radius:14px;background:linear-gradient(145deg,rgba(8,17,42,.72),rgba(23,12,49,.7));box-shadow:inset 0 1px rgba(255,255,255,.04)}
+.aira-holo-talk-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.aira-holo-talk-head small,.aira-holo-talk-head b{display:block}
+.aira-holo-talk-head small{font-size:7px;letter-spacing:.18em;color:#7f9fc9}
+.aira-holo-talk-head b{margin-top:3px;font-size:13px;color:#f0eaff}
+.aira-holo-talk-status{font-size:7px;letter-spacing:.1em;color:#69e9d1}
+.aira-holo-transcript{display:flex;flex-direction:column;gap:7px;max-height:145px;min-height:58px;overflow-y:auto;padding:7px;border-radius:9px;background:rgba(0,0,0,.19);scrollbar-width:thin}
+.aira-holo-transcript p{margin:0;font-size:10px;line-height:1.55;overflow-wrap:anywhere}
+.aira-holo-empty{color:#8e86aa}
+.aira-holo-line{max-width:94%;padding:7px 9px;border-radius:9px}
+.aira-holo-line.user{align-self:flex-end;background:rgba(102,83,206,.25);color:#e8e0ff}
+.aira-holo-line.assistant{align-self:flex-start;background:rgba(55,156,190,.13);color:#c8f5ff}
+.aira-holo-talk-actions{display:flex;gap:8px;margin-top:9px}
+.aira-holo-mic,.aira-holo-interview,.aira-holo-input-row button,.aira-holo-stop{border:1px solid rgba(124,183,255,.32);border-radius:9px;padding:9px 12px;background:rgba(88,85,190,.2);color:#eee9ff;font:inherit;font-size:10px;cursor:pointer}
+.aira-holo-mic{flex:1;background:linear-gradient(110deg,rgba(112,74,230,.32),rgba(38,160,192,.2))}
+.aira-holo-mic.recording{border-color:#ff789f;background:rgba(202,55,111,.25);box-shadow:0 0 18px rgba(255,85,142,.18)}
+.aira-holo-interview{flex:1}
+.aira-holo-interview.active{border-color:rgba(90,237,204,.65);background:rgba(42,170,142,.2)}
+.aira-holo-input-row{display:flex;gap:7px;margin-top:8px}
+.aira-holo-input-row input{width:100%;min-width:0;border:1px solid rgba(154,137,210,.22);border-radius:9px;padding:10px;background:rgba(3,7,22,.68);color:#f6f0ff;font:inherit;font-size:11px;outline:none}
+.aira-holo-input-row input:focus{border-color:rgba(103,211,255,.65);box-shadow:0 0 0 2px rgba(103,211,255,.08)}
+.aira-holo-input-row button{background:linear-gradient(110deg,#6748c7,#257f9c)}
+.aira-holo-mic:disabled,.aira-holo-input-row button:disabled{opacity:.45;cursor:not-allowed}
+.aira-holo-stop{margin-top:7px;padding:6px 9px;font-size:9px;background:rgba(184,69,111,.17);border-color:rgba(245,112,157,.3)}
+@media(max-width:850px){.aira-holo-main{grid-template-columns:minmax(0,1fr) minmax(300px,.85fr)}.aira-holo-panel{padding:15px;max-height:calc(100dvh - 110px)}}
+@media(max-width:650px){
+  .aira-holo-main{grid-template-columns:1fr;grid-template-rows:minmax(190px,1fr) auto;gap:3px}
+  .aira-holo-scene{min-height:190px}
+  .aira-holo-panel{max-width:560px;width:100%;max-height:43dvh;overflow-y:auto;padding:11px 13px;margin:0 auto}
+  .aira-holo-talk{margin-top:8px;padding:9px}
+  .aira-holo-transcript{max-height:76px;min-height:38px}
+  .aira-holo-talk-actions{margin-top:6px}
+  .aira-holo-input-row{margin-top:6px}
+  .aira-holo-footer{margin-top:7px}
+}
+@media(max-height:720px) and (min-width:651px){.aira-holo-panel{max-height:calc(100dvh - 95px);padding:13px}.aira-holo-transcript{max-height:100px}}
