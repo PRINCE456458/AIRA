@@ -668,3 +668,59 @@ body.aira-hologram-active .aira-holo-canvas {
   .aira-holo-footer{margin-top:7px}
 }
 @media(max-height:720px) and (min-width:651px){.aira-holo-panel{max-height:calc(100dvh - 95px);padding:13px}.aira-holo-transcript{max-height:100px}}
+
+
+/* True edge-to-edge fullscreen hologram: remove dashboard page-wrap width limits. */
+html:has(body.aira-hologram-active),
+body.aira-hologram-active {
+  width:100%;
+  min-width:0;
+  height:100%;
+  overflow:hidden!important;
+}
+body.aira-hologram-active #shell {
+  display:block!important;
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  max-width:none!important;
+  height:100dvh!important;
+  margin:0!important;
+  padding:0!important;
+}
+body.aira-hologram-active #shell > .main {
+  display:block!important;
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  height:100dvh!important;
+  margin:0!important;
+  padding:0!important;
+}
+body.aira-hologram-active #view-hologram,
+body.aira-hologram-active #shell > .main > #view-hologram.page-wrap {
+  display:block!important;
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  overflow:hidden!important;
+}
+body.aira-hologram-active .aira-holo-page {
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  height:100dvh!important;
+  min-height:100dvh!important;
+  margin:0!important;
+  border-radius:0!important;
+}
