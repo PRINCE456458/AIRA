@@ -16,27 +16,22 @@
     return n;
   };
 
+
 async function loadVision() {
-  const CDN =
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision";
-
   try {
-    console.log("AIRA: Loading official MediaPipe bundle...");
+    console.log("AIRA: Loading local MediaPipe bundle...");
 
-    
-const vision = await import(
-  "/static/mediapipe/vision_bundle.mjs"
-);
-
-const files = await vision.FilesetResolver.forVisionTasks(
-  "/static/mediapipe/wasm"
-);
-
-return { vision, files };
+    const vision = await import(
+      "/static/mediapipe/vision_bundle.mjs"
+    );
 
     if (!vision.FaceLandmarker) {
       throw new Error("FaceLandmarker not found in MediaPipe.");
     }
+
+    const files = await vision.FilesetResolver.forVisionTasks(
+      "/static/mediapipe/wasm"
+    );
 
     console.log("AIRA: MediaPipe loaded successfully.");
 
@@ -50,6 +45,8 @@ return { vision, files };
     );
   }
 }
+
+
   async function createLandmarker(vision, files, delegate) {
     return vision.FaceLandmarker.createFromOptions(files, {
       baseOptions: {
