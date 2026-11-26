@@ -70,7 +70,7 @@
       float d = 0.0;
       vec3 local = vec3(0.0);
       bool hit = false;
-      for (int i=0; i<88; i++) {
+      for (int i=0; i<112; i++) {
         vec3 pos = ro + rd*t;
         d = scene(pos, local);
         if (d < 0.0025) { hit = true; break; }
@@ -156,7 +156,7 @@
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
-      const ratio = Math.min(window.devicePixelRatio || 1, 1.7);
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
       width = Math.max(1, Math.round(rect.width * ratio));
       height = Math.max(1, Math.round(rect.height * ratio));
       if (canvas.width !== width || canvas.height !== height) {
@@ -219,7 +219,20 @@
               <button type="button" data-mode="3"><span>⌁</span>Speaking</button>
             </div>
             <p class="aira-holo-note" id="holoNote">AIRA is standing by. Choose a mode to animate the avatar.</p>
-            <div class="aira-holo-footer"><span>LOCAL WEBGL RENDER</span><span>NO CAMERA REQUIRED</span></div>
+            <div class="aira-holo-footer"><span>HIGH-DPI WEBGL RENDER</span><span>VOICE READY</span></div>
+            <section class="aira-holo-talk" aria-label="Talk with AIRA">
+              <div class="aira-holo-talk-head"><div><small>LIVE CONVERSATION</small><b>Talk with AIRA</b></div><span class="aira-holo-talk-status" id="holoTalkStatus">READY</span></div>
+              <div class="aira-holo-transcript" id="holoTranscript" aria-live="polite"><p class="aira-holo-empty">Hi! I'm AIRA. Tap the mic to talk, or type a message below.</p></div>
+              <div class="aira-holo-talk-actions">
+                <button type="button" class="aira-holo-mic" id="holoMic" aria-label="Start voice input">🎙 <span>Talk</span></button>
+                <button type="button" class="aira-holo-interview" id="holoInterview">Start interview</button>
+              </div>
+              <form class="aira-holo-input-row" id="holoChatForm">
+                <input id="holoChatInput" type="text" maxlength="4000" autocomplete="off" placeholder="Say or type something..." aria-label="Message AIRA">
+                <button type="submit" id="holoSend">Send</button>
+              </form>
+              <button type="button" class="aira-holo-stop" id="holoStop" hidden>Stop AIRA speaking</button>
+            </section>
           </aside>
         </div>
         <div class="aira-holo-bottom"><span>● SYSTEM NOMINAL</span><span>INTERACTIVE 3D HUMAN HOLOGRAM</span><span>© AIRA AI</span></div>
@@ -262,6 +275,167 @@
           page.dataset.mode = String(value);
         });
       });
+
+      // Voice conversation uses the browser's built-in speech APIs and AIRA's existing chat endpoint.
+      const transcript = page.querySelector("#holoTranscript");
+      const chatForm = page.querySelector("#holoChatForm");
+      const chatInput = page.querySelector("#holoChatInput");
+      const micButton = page.querySelector("#holoMic");
+      const interviewButton = page.querySelector("#holoInterview");
+      const talkStatus = page.querySelector("#holoTalkStatus");
+      const stopButton = page.querySelector("#holoStop");
+      const sendButton = page.querySelector("#holoSend");
+      const conversation = [];
+      let interviewMode = false, sending = false, recognition = null, listening = false;
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const setTalkStatus = value => { talkStatus.textContent = value; };
+      const addLine = (role, value) => {
+        const line = document.createElement("p");
+        line.className = "aira-holo-line " + role;
+        line.textContent = value;
+        transcript.appendChild(line);
+        transcript.scrollTop = transcript.scrollHeight;
+        return line;
+      };
+      const stopSpeaking = () => {
+        if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+        stopButton.hidden = true;
+      };
+      const speak = value => {
+        if (!("speechSynthesis" in window) || !value) return;
+        stopSpeaking();
+        const utterance = new SpeechSynthesisUtterance(value.slice(0, 3500));
+        utterance.rate = 1;
+        utterance.pitch = 1.02;
+        utterance.onstart = () => {
+          setTalkStatus("AIRA SPEAKING");
+          stateLabel.textContent = "Speaking";
+          if (renderer) renderer.setMode(3);
+          stopButton.hidden = false;
+        };
+        utterance.onend = () => {
+          setTalkStatus("READY");
+          stateLabel.textContent = "Idle";
+          if (renderer) renderer.setMode(0);
+          stopButton.hidden = true;
+        };
+        utterance.onerror = () => {
+          setTalkStatus("VOICE UNAVAILABLE");
+          stopButton.hidden = true;
+        };
+        window.speechSynthesis.speak(utterance);
+      };
+      async function askAira(raw) {
+        const question = String(raw || "").trim();
+        if (!question || sending) return;
+        stopSpeaking();
+        if (recognition && listening) { try { recognition.stop(); } catch (_) {} }
+        if (transcript.querySelector(".aira-holo-empty")) transcript.replaceChildren();
+        addLine("user", question);
+        conversation.push({role:"user",content:question});
+        if (conversation.length > 12) conversation.splice(0, conversation.length - 12);
+        const answerLine = addLine("assistant", "AIRA is thinking…");
+        sending = true; sendButton.disabled = true; micButton.disabled = true;
+        setTalkStatus("THINKING");
+        stateLabel.textContent = "Thinking";
+        if (renderer) renderer.setMode(2);
+        try {
+          const response = await fetch("/api/chat", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              mode:"aira",
+              messages: interviewMode
+                ? [{role:"user",content:"Act as AIRA, a warm, professional mock-interview partner. Ask only one question at a time, wait for my answer, then give brief constructive feedback and the next question. Keep the conversation natural and supportive. Current message: "+question}, ...conversation.slice(1)]
+                : conversation
+            })
+          });
+          if (!response.ok) {
+            let reason = "AIRA could not reply. Please try again.";
+            try { reason = (await response.json()).error || reason; } catch (_) {}
+            throw new Error(reason);
+          }
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let answer = "";
+          for (;;) {
+            const part = await reader.read();
+            if (part.done) break;
+            answer += decoder.decode(part.value,{stream:true});
+            answerLine.textContent = answer;
+            transcript.scrollTop = transcript.scrollHeight;
+          }
+          answer += decoder.decode();
+          answerLine.textContent = answer || "I couldn't generate a reply. Please try again.";
+          if (answer && !answer.startsWith("⚠")) {
+            conversation.push({role:"assistant",content:answer});
+            setTalkStatus("AIRA REPLY READY");
+            speak(answer);
+          } else {
+            setTalkStatus("REPLY ERROR");
+            if (renderer) renderer.setMode(0);
+          }
+        } catch (error) {
+          answerLine.textContent = error.message || "Connection problem. Please try again.";
+          setTalkStatus("CONNECTION ISSUE");
+          if (renderer) renderer.setMode(0);
+        } finally {
+          sending = false; sendButton.disabled = false; micButton.disabled = false;
+          chatInput.focus();
+        }
+      }
+      chatForm.addEventListener("submit", event => {
+        event.preventDefault();
+        const value = chatInput.value;
+        chatInput.value = "";
+        askAira(value);
+      });
+      stopButton.addEventListener("click", stopSpeaking);
+      interviewButton.addEventListener("click", () => {
+        interviewMode = !interviewMode;
+        interviewButton.classList.toggle("active", interviewMode);
+        interviewButton.textContent = interviewMode ? "Interview mode ON" : "Start interview";
+        if (interviewMode) {
+          conversation.length = 0;
+          askAira("Start my mock interview. First ask me what role or subject I want to practise.");
+        }
+      });
+      if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.lang = navigator.language || "en-IN";
+        recognition.interimResults = false;
+        recognition.continuous = false;
+        recognition.onstart = () => {
+          listening = true; setTalkStatus("LISTENING");
+          stateLabel.textContent = "Listening";
+          micButton.classList.add("recording");
+          micButton.innerHTML = "■ <span>Stop</span>";
+          if (renderer) renderer.setMode(1);
+        };
+        recognition.onresult = event => {
+          const spoken = event.results && event.results[0] && event.results[0][0] ? event.results[0][0].transcript : "";
+          if (spoken) askAira(spoken);
+        };
+        recognition.onerror = event => {
+          setTalkStatus(event.error === "not-allowed" ? "MIC PERMISSION DENIED" : "VOICE INPUT ISSUE");
+          addLine("assistant", event.error === "not-allowed" ? "Please allow microphone access in your browser to use voice chat." : "Voice input had a problem. You can type your message instead.");
+        };
+        recognition.onend = () => {
+          listening = false; micButton.classList.remove("recording");
+          micButton.innerHTML = "🎙 <span>Talk</span>";
+          if (!sending) { stateLabel.textContent = "Idle"; if (renderer) renderer.setMode(0); }
+        };
+        micButton.addEventListener("click", () => {
+          if (listening) { recognition.stop(); return; }
+          try { stopSpeaking(); recognition.start(); }
+          catch (_) { setTalkStatus("MIC BUSY"); }
+        });
+      } else {
+        micButton.disabled = true;
+        micButton.title = "Voice input works in supported browsers such as Chrome and Edge. You can still type.";
+        setTalkStatus("TYPE OR USE CHROME");
+      }
+      window.addEventListener("beforeunload", stopSpeaking, {once:true});
 
       canvas.addEventListener("pointerdown", event => {
         dragging = true; lastX = event.clientX; lastY = event.clientY;
