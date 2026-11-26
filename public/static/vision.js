@@ -6,9 +6,7 @@
   const V = window.AiraViews = window.AiraViews || {};
 
  
-  const MODEL =
-    "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
-
+const MODEL = "/static/mediapipe/face_landmarker.task";
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
