@@ -6,7 +6,8 @@
   const V = window.AiraViews = window.AiraViews || {};
 
   const CDN_LIST = [
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision"
+  "https://esm.sh/@mediapipe/tasks-vision@0.10.14?bundle",
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14"
 ];
 
   const MODEL =
@@ -19,28 +20,37 @@
     return n;
   };
 
-  async function loadVision() {
-  const cdn = CDN_LIST[0];
+ async function loadVision() {
+  let lastError;
 
-  try {
-    const vision = await import(
-      cdn + "/vision_bundle.mjs"
-    );
+  for (const cdn of CDN_LIST) {
+    try {
+      console.log("AIRA loading MediaPipe:", cdn);
 
-    const files = await vision.FilesetResolver.forVisionTasks(
-      cdn + "/wasm"
-    );
+      const vision = await import(cdn);
 
-    return { vision, files };
+      const files = await vision.FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+      );
 
-  } catch (error) {
-    console.error("MediaPipe loading failed:", error);
+      if (!vision.FaceLandmarker) {
+        throw new Error("FaceLandmarker export not found.");
+      }
 
-    throw new Error(
-      "MediaPipe module failed: " +
-      (error.message || "Check browser console and network.")
-    );
+      console.log("AIRA MediaPipe loaded successfully.");
+
+      return { vision, files };
+
+    } catch (error) {
+      console.error("MediaPipe CDN failed:", cdn, error);
+      lastError = error;
+    }
   }
+
+  throw new Error(
+    "All MediaPipe CDNs failed. Last error: " +
+    (lastError?.message || "Unknown loading error")
+  );
 }
 
   async function createLandmarker(vision, files, delegate) {
