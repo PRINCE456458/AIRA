@@ -149,9 +149,13 @@
     document.title = VIEWS[view] + " - Aira AI";
     closeSide();
     if (view === "chat" && window.AiraApp) window.AiraApp.showChat();
-    if (view === "home") refreshUsage();
-    render();
-    if (view !== "home" && view !== "chat" && view !== "projects" && view !== "help") await showModule(view, m[2] || "");
+    if (view === "home") {
+      refreshUsage();
+      render();
+    }
+    if (view !== "home" && view !== "chat" && view !== "projects" && view !== "help") {
+      await showModule(view, m[2] || "");
+    }
     document.dispatchEvent(new CustomEvent("aira:route", { detail: { view, arg: view === "projects" ? m[2] || "" : "" } }));
   }
   window.addEventListener("hashchange", route);
