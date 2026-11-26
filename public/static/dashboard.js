@@ -215,6 +215,9 @@
 
   function renderModes(s) {
     const box = $("#modeCards");
+    // The current Command Deck uses static .cc-modules cards in index.html.
+    // Keep this legacy renderer optional so a missing legacy container cannot crash Home.
+    if (!box) return;
     box.replaceChildren();
     s.modes.forEach((m) => {
       const info = MODE_INFO[m.id] || [m.label, "Start a chat in this mode."];
