@@ -23,14 +23,16 @@ async function loadVision() {
   try {
     console.log("AIRA: Loading official MediaPipe bundle...");
 
-    const vision = await import(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs"
-    );
+    
+const vision = await import(
+  "/static/mediapipe/vision_bundle.mjs"
+);
 
-    const files =
-      await vision.FilesetResolver.forVisionTasks(
-        CDN + "/wasm"
-      );
+const files = await vision.FilesetResolver.forVisionTasks(
+  "/static/mediapipe/wasm"
+);
+
+return { vision, files };
 
     if (!vision.FaceLandmarker) {
       throw new Error("FaceLandmarker not found in MediaPipe.");
