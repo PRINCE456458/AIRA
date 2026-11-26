@@ -95,25 +95,26 @@
     }
     return sec;
   }
-  function showModule(name, arg) {
+  async function showModule(name, arg) {
     const sec = ensureSection(name);
     const mod = (window.AiraViews || {})[name];
     const who = (state() && state().user) || "";
     try {
       if (!mod || typeof mod.show !== "function") {
-        throw new Error("Module registration missing: " + name);
+        throw new Error("The " + name + " module did not register. Check that its script loaded successfully.");
       }
       if (!sec.dataset.mounted) {
-        if (typeof mod.mount === "function") mod.mount(sec);
+        if (typeof mod.mount === "function") await mod.mount(sec);
         sec.dataset.mounted = "1";
       }
       sec.dataset.user = who;
-      mod.show(sec, arg);
+      await mod.show(sec, arg);
+      if (current === name) sec.hidden = false;
     } catch (error) {
       console.error("[AIRA] Module render failed:", name, error);
       sec.replaceChildren();
       sec.className = "view page-wrap aira-module-error";
-      sec.hidden = false;
+      sec.hidden = current !== name;
       const card = document.createElement("section");
       card.className = "card";
       const heading = document.createElement("h2");
@@ -130,14 +131,14 @@
       sec.appendChild(card);
     }
   }
-  function route() {
+  async function route() {
     const m = location.hash.match(/^#\/(\w+)(?:\/([a-f0-9]{16}))?/) || [];
     const name = m[1];
     const view = VIEWS[name] ? name : "home";
     current = view;
     document.body.classList.toggle("aira-hologram-active", view === "hologram");
     const mod = (window.AiraViews || {})[view];
-    if (mod) ensureSection(view);
+    if (view !== "home" && view !== "chat" && view !== "projects" && view !== "help") ensureSection(view);
     document.querySelectorAll(".main > .view").forEach((sec) => { sec.hidden = sec.id !== "view-" + view; });
     document.querySelectorAll(".nav-item[data-view]").forEach((a) => {
       const on = a.dataset.view === view;
@@ -150,7 +151,7 @@
     if (view === "chat" && window.AiraApp) window.AiraApp.showChat();
     if (view === "home") refreshUsage();
     render();
-    if (mod) showModule(view, m[2] || "");
+    if (view !== "home" && view !== "chat" && view !== "projects" && view !== "help") await showModule(view, m[2] || "");
     document.dispatchEvent(new CustomEvent("aira:route", { detail: { view, arg: view === "projects" ? m[2] || "" : "" } }));
   }
   window.addEventListener("hashchange", route);
