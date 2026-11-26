@@ -74,41 +74,39 @@
       </div>
     </header>
 
-    <section id="view-home" class="view page-wrap" hidden aria-label="Home">
-      <div class="hero-card">
-        <img class="hero-mini" src="/static/logo.svg" alt="" width="72" height="72">
-        <div class="hero-copy">
-          <p class="sub">Think &middot; Ask &middot; Create &middot; Explore</p>
-          <h2 id="homeHello">Welcome to Aira</h2>
-          <p class="muted">Your Personal AI. Pick a mode to start.</p>
-        </div>
-        <a class="primary linkbtn" href="#/chat" id="homeStart">Start chatting</a>
-      </div>
-      <h3 class="sec">Start with a mode</h3>
-      <div id="modeCards" class="cards"></div>
-      <div class="grid2">
-        <div class="card">
-          <h3>Today</h3>
-          <p id="usageText" class="big">&nbsp;</p>
-          <div class="bar" role="progressbar" aria-label="Messages used today" aria-valuemin="0" aria-valuemax="100" id="usageBarWrap"><span id="usageBar"></span></div>
-          <p id="usageNote" class="muted small"></p>
-        </div>
-        <div class="card">
-          <h3>Your chats</h3>
-          <ul id="recentList" class="recent"></ul>
-          <p id="recentEmpty" class="muted"></p>
-          <button id="homeLogin" class="ghost" type="button" hidden>Log in to save your chats</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>What is switched on</h3>
-        <ul id="capList" class="caps"></ul>
-      </div>
-      <div class="card">
-        <h3>Explore your tools</h3>
-        <div id="toolCards" class="cards"></div>
-      </div>
-    </section>
+    <section id="view-home" class="view page-wrap command-home" hidden aria-label="AIRA Command Center">
+  <div class="cc-topline">
+    <div><span class="cc-eyebrow">PERSONAL ARTIFICIAL INTELLIGENCE</span><h2 id="homeHello">Welcome to AIRA</h2><p>Your intelligence. Your workspace. One command center.</p></div>
+    <div class="cc-live"><i></i><span>CORE SYSTEM ONLINE</span><small> AIRA / 01</small></div>
+  </div>
+  <section class="cc-hero">
+    <div class="cc-hero-copy">
+      <span class="cc-kicker">YOUR AI COMMAND CENTER</span>
+      <h3>What shall we<br><em>work on today?</em></h3>
+      <p>Ask AIRA, explore your workspace, or launch an intelligent module.</p>
+      <div class="cc-hero-actions"><a class="cc-primary" href="#/chat">✦ Talk to AIRA</a><a class="cc-secondary" href="#/hologram">Open Avatar ↗</a></div>
+    </div>
+    <div class="cc-core-art" aria-hidden="true"><div class="cc-core-ring ring-a"></div><div class="cc-core-ring ring-b"></div><div class="cc-core-orb"><span>A</span></div><div class="cc-core-caption">AIRA CORE <small>INTELLIGENCE ENGINE</small></div></div>
+    <div class="cc-hero-foot"><span>● NEURAL INTERFACE ACTIVE</span><span>SECURE SESSION</span></div>
+  </section>
+  <div class="cc-section-head"><div><span class="cc-eyebrow">SYSTEM OVERVIEW</span><h3>Intelligence modules</h3></div><span class="cc-section-note">SELECT A MODULE TO LAUNCH</span></div>
+  <div class="cc-modules">
+    <a class="cc-module cc-module-featured" href="#/chat"><span class="cc-module-icon">✧</span><span class="cc-module-status">● ACTIVE</span><b>Aira Brain</b><p>AI reasoning, conversations and problem solving.</p><span class="cc-launch">OPEN MODULE ↗</span></a>
+    <a class="cc-module" href="#/vision"><span class="cc-module-icon">◉</span><span class="cc-module-status">● READY</span><b>Aira Vision</b><p>Camera-based visual understanding.</p><span class="cc-launch">OPEN MODULE ↗</span></a>
+    <a class="cc-module" href="#/memory"><span class="cc-module-icon">⌘</span><span class="cc-module-status">● READY</span><b>Aira Memory</b><p>Saved knowledge and personal context.</p><span class="cc-launch">OPEN MODULE ↗</span></a>
+    <a class="cc-module" href="#/voice"><span class="cc-module-icon">♫</span><span class="cc-module-status">● READY</span><b>Aira Voice</b><p>Speech input and spoken responses.</p><span class="cc-launch">OPEN MODULE ↗</span></a>
+    <a class="cc-module" href="#/write"><span class="cc-module-icon">⌁</span><span class="cc-module-status">● READY</span><b>Aira Studio</b><p>Create content, documents and projects.</p><span class="cc-launch">OPEN MODULE ↗</span></a>
+    <a class="cc-module" href="#/guardian"><span class="cc-module-icon">⬡</span><span class="cc-module-status">● BROWSER CHECK</span><b>Aira Guardian</b><p>Browser security and privacy snapshot.</p><span class="cc-launch">OPEN MODULE ↗</span></a>
+    <a class="cc-module" href="#/hologram"><span class="cc-module-icon">◌</span><span class="cc-module-status">● READY</span><b>Aira Avatar</b><p>Interactive 3D holographic personality.</p><span class="cc-launch">OPEN MODULE ↗</span></a>
+  </div>
+  <div class="cc-lower-grid">
+    <section class="cc-panel"><div class="cc-panel-head"><div><span class="cc-eyebrow">USAGE MONITOR</span><h3>Today's activity</h3></div><span class="cc-panel-tag">LIVE</span></div><p id="usageText" class="cc-usage-value">Loading usage…</p><div class="bar cc-usage-bar" id="usageBarWrap" role="progressbar" aria-label="Messages used today" aria-valuemin="0" aria-valuemax="100"><span id="usageBar"></span></div><p id="usageNote" class="cc-muted"></p></section>
+    <section class="cc-panel"><div class="cc-panel-head"><div><span class="cc-eyebrow">RECENT ACTIVITY</span><h3>Your conversations</h3></div><a href="#/chat">OPEN CHAT ↗</a></div><ul id="recentList" class="recent cc-recent"></ul><p id="recentEmpty" class="cc-muted"></p><button id="homeLogin" class="ghost" type="button" hidden>Log in to save your chats</button></section>
+  </div>
+  <section class="cc-panel cc-capabilities"><div class="cc-panel-head"><div><span class="cc-eyebrow">CAPABILITY STATUS</span><h3>Connected services</h3></div><span class="cc-panel-tag">SYSTEM CHECK</span></div><ul id="capList" class="caps"></ul></section>
+  <section class="cc-tools"><div class="cc-section-head"><div><span class="cc-eyebrow">QUICK ACCESS</span><h3>All AIRA tools</h3></div></div><div id="toolCards" class="cards"></div></section>
+  <footer class="cc-footer"><span>AIRA AI · YOUR PERSONAL AI</span><span>BUILT TO THINK, CREATE & ASSIST</span></footer>
+</section>
 
     <section id="view-projects" class="view page-wrap" hidden aria-label="Projects">
       <div id="projList">
