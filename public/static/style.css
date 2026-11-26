@@ -822,3 +822,13 @@ body.aira-hologram-active .aira-holo-page {
   position: relative;
   z-index: 1;
 }
+
+
+/* Keep every route's real content above the decorative cosmic canvas. */
+#shell.shell{position:relative;z-index:1}
+#shell.shell>.main{position:relative;z-index:1;min-width:0}
+#shell.shell>.main>.view:not([hidden]){position:relative;z-index:1}
+.aira-module-error{width:100%;max-width:1100px;margin:24px auto}
+.aira-module-error .card{padding:24px;border:1px solid rgba(255,120,140,.35);background:rgba(22,15,30,.97);color:#f5efff}
+.aira-module-error h2{margin:0 0 12px}
+.aira-module-error-detail{max-height:42vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:#ffb8c2;font-size:12px;line-height:1.5}
