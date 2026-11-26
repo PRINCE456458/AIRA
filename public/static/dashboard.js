@@ -2,11 +2,11 @@
   "use strict";
   const $ = (s) => document.querySelector(s);
   const NAV = [
-    [null, [["home", "Home", "i-home"], ["chat", "AI Chat", "i-chat"], ["projects", "Projects", "i-folder"]]],
-    ["Create", [["write", "Writing Studio", "i-pen"], ["image", "Image Studio", "i-image"], ["voice", "Voice Studio", "i-mic"], ["files", "PDF & DOCX Creator", "i-doc"]]],
+    [null, [["home", "Command Center", "i-home"], ["chat", "Aira Brain", "i-chat"], ["projects", "Projects", "i-folder"]]],
+    ["Create", [["write", "Aira Studio", "i-pen"], ["image", "Image Studio", "i-image"], ["voice", "Aira Voice", "i-mic"], ["files", "PDF & DOCX Creator", "i-doc"]]],
     ["Learn", [["research", "Research", "i-search"], ["docs", "PDF & Notes", "i-doc"], ["planner", "Study Planner", "i-book"]]],
-    ["Organise", [["tasks", "Tasks", "i-check"], ["reminders", "Reminders", "i-bell"], ["expenses", "Expenses", "i-wallet"], ["library", "Library", "i-folder"], ["memory", "Memory", "i-brain"]]],
-   ["More", [["toolbox", "Toolbox", "i-plug"], ["vision", "AIRA Vision AI", "i-image"], ["hologram", "3D Hologram", "i-image"], ["guardian", "AIRA Guardian", "i-cog"], ["settings", "Settings", "i-cog"], ["pro", "Pro / Subscription", "i-star"], ["help", "Help & Support", "i-help"]]],
+    ["Organise", [["tasks", "Tasks", "i-check"], ["reminders", "Reminders", "i-bell"], ["expenses", "Expenses", "i-wallet"], ["library", "Library", "i-folder"], ["memory", "Aira Memory", "i-brain"]]],
+   ["More", [["toolbox", "Toolbox", "i-plug"], ["vision", "Aira Vision", "i-image"], ["hologram", "Aira Avatar", "i-image"], ["guardian", "AIRA Guardian", "i-cog"], ["settings", "Settings", "i-cog"], ["pro", "Pro / Subscription", "i-star"], ["help", "Help & Support", "i-help"]]],
   ];
   const VIEWS = {};
   NAV.forEach(([, items]) => items.forEach(([id, name]) => { VIEWS[id] = name; }));
