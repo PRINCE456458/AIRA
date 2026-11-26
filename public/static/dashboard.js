@@ -95,12 +95,35 @@
     }
     return sec;
   }
-  function showModule(name, arg) {
-    const sec = ensureSection(name), mod = window.AiraViews[name];
+  async function showModule(name, arg) {
+    const sec = ensureSection(name), mod = (window.AiraViews || {})[name];
     const who = (state() && state().user) || "";
-    if (!sec.dataset.mounted) { mod.mount(sec); sec.dataset.mounted = "1"; }
-    sec.dataset.user = who;
-    mod.show(sec, arg);
+    sec.classList.add("module-loading");
+    try {
+      if (!mod || typeof mod.show !== "function") {
+        throw new Error("This module did not load. Refresh the page and try again.");
+      }
+      if (!sec.dataset.mounted) {
+        if (typeof mod.mount === "function") await mod.mount(sec);
+        sec.dataset.mounted = "1";
+      }
+      sec.dataset.user = who;
+      await mod.show(sec, arg);
+      sec.classList.remove("module-loading");
+    } catch (error) {
+      console.error("AIRA module failed:", name, error);
+      sec.classList.remove("module-loading");
+      sec.replaceChildren();
+      const panel = el("div", "card module-error");
+      panel.appendChild(el("h2", "", "AIRA module could not open"));
+      panel.appendChild(el("p", "muted", "The module encountered a loading error. Your saved chats and data are not affected."));
+      panel.appendChild(el("p", "muted small", error && error.message ? error.message : "Unknown module error"));
+      const retry = el("button", "primary", "Try again");
+      retry.type = "button";
+      retry.addEventListener("click", () => showModule(name, arg));
+      panel.appendChild(retry);
+      sec.appendChild(panel);
+    }
   }
   function route() {
     const m = location.hash.match(/^#\/(\w+)(?:\/([a-f0-9]{16}))?/) || [];
