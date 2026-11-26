@@ -5,11 +5,7 @@
 
   const V = window.AiraViews = window.AiraViews || {};
 
-  const CDN_LIST = [
-  "https://esm.sh/@mediapipe/tasks-vision@0.10.14?bundle",
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14"
-];
-
+ 
   const MODEL =
     "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 
@@ -20,39 +16,38 @@
     return n;
   };
 
- async function loadVision() {
-  let lastError;
+async function loadVision() {
+  const CDN =
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision";
 
-  for (const cdn of CDN_LIST) {
-    try {
-      console.log("AIRA loading MediaPipe:", cdn);
+  try {
+    console.log("AIRA: Loading official MediaPipe bundle...");
 
-      const vision = await import(cdn);
+    const vision = await import(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs"
+    );
 
-      const files = await vision.FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+    const files =
+      await vision.FilesetResolver.forVisionTasks(
+        CDN + "/wasm"
       );
 
-      if (!vision.FaceLandmarker) {
-        throw new Error("FaceLandmarker export not found.");
-      }
-
-      console.log("AIRA MediaPipe loaded successfully.");
-
-      return { vision, files };
-
-    } catch (error) {
-      console.error("MediaPipe CDN failed:", cdn, error);
-      lastError = error;
+    if (!vision.FaceLandmarker) {
+      throw new Error("FaceLandmarker not found in MediaPipe.");
     }
+
+    console.log("AIRA: MediaPipe loaded successfully.");
+
+    return { vision, files };
+
+  } catch (error) {
+    console.error("AIRA MediaPipe import error:", error);
+
+    throw new Error(
+      "MediaPipe loading failed: " + error.message
+    );
   }
-
-  throw new Error(
-    "All MediaPipe CDNs failed. Last error: " +
-    (lastError?.message || "Unknown loading error")
-  );
 }
-
   async function createLandmarker(vision, files, delegate) {
     return vision.FaceLandmarker.createFromOptions(files, {
       baseOptions: {
