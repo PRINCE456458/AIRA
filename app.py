@@ -1263,17 +1263,26 @@ def health():
     return jsonify(ok=True)
 
 
+
 @app.after_request
 def safety_headers(response):
     response.headers.setdefault("Content-Security-Policy", (
-        "default-src 'self'; img-src 'self' data: https://*.googleusercontent.com; style-src 'self'; script-src 'self'; "
-        "connect-src 'self'; frame-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+        "default-src 'self'; "
+        "img-src 'self' data: https://*.googleusercontent.com; "
+        "style-src 'self'; "
+        "script-src 'self' 'wasm-unsafe-eval'; "
+        "connect-src 'self'; "
+        "frame-src 'self'; "
+        "base-uri 'none'; "
+        "frame-ancestors 'none'; "
+        "form-action 'self'"
     ))
     response.headers["X-Content-Type-Options"] = "nosniff"
     if getattr(g, "rid", None):
         response.headers["X-Request-Id"] = g.rid
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
+
 
 
 features.register(sys.modules[__name__])
