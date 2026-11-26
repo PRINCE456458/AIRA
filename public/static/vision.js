@@ -6,9 +6,8 @@
   const V = window.AiraViews = window.AiraViews || {};
 
   const CDN_LIST = [
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14",
-    "https://unpkg.com/@mediapipe/tasks-vision@0.10.14"
-  ];
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision"
+];
 
   const MODEL =
     "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
@@ -21,25 +20,28 @@
   };
 
   async function loadVision() {
-    let lastError;
+  const cdn = CDN_LIST[0];
 
-    for (const cdn of CDN_LIST) {
-      try {
-        const vision = await import(cdn + "/vision_bundle.mjs");
+  try {
+    const vision = await import(
+      cdn + "/vision_bundle.mjs"
+    );
 
-        const files = await vision.FilesetResolver.forVisionTasks(
-          cdn + "/wasm"
-        );
+    const files = await vision.FilesetResolver.forVisionTasks(
+      cdn + "/wasm"
+    );
 
-        return { vision, files };
-      } catch (error) {
-        lastError = error;
-        console.warn("AIRA Vision CDN failed:", cdn, error);
-      }
-    }
+    return { vision, files };
 
-    throw lastError || new Error("Could not load MediaPipe.");
+  } catch (error) {
+    console.error("MediaPipe loading failed:", error);
+
+    throw new Error(
+      "MediaPipe module failed: " +
+      (error.message || "Check browser console and network.")
+    );
   }
+}
 
   async function createLandmarker(vision, files, delegate) {
     return vision.FaceLandmarker.createFromOptions(files, {
