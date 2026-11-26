@@ -6,7 +6,7 @@
     ["Create", [["write", "Writing Studio", "i-pen"], ["image", "Image Studio", "i-image"], ["voice", "Voice Studio", "i-mic"], ["files", "PDF & DOCX Creator", "i-doc"]]],
     ["Learn", [["research", "Research", "i-search"], ["docs", "PDF & Notes", "i-doc"], ["planner", "Study Planner", "i-book"]]],
     ["Organise", [["tasks", "Tasks", "i-check"], ["reminders", "Reminders", "i-bell"], ["expenses", "Expenses", "i-wallet"], ["library", "Library", "i-folder"], ["memory", "Memory", "i-brain"]]],
-   ["More", [["toolbox", "Toolbox", "i-plug"], ["vision", "AIRA Vision AI", "i-image"], ["settings", "Settings", "i-cog"], ["pro", "Pro / Subscription", "i-star"], ["help", "Help & Support", "i-help"]]],
+   ["More", [["toolbox", "Toolbox", "i-plug"], ["vision", "AIRA Vision AI", "i-image"], ["hologram", "3D Hologram", "i-image"], ["settings", "Settings", "i-cog"], ["pro", "Pro / Subscription", "i-star"], ["help", "Help & Support", "i-help"]]],
   ];
   const VIEWS = {};
   NAV.forEach(([, items]) => items.forEach(([id, name]) => { VIEWS[id] = name; }));
@@ -24,6 +24,7 @@
     library: "Everything you saved, in one place.",
     memory: "Tell Aira things to remember about you.",
     toolbox: "Word counter, CGPA calculator, timer and more.",
+    hologram: "Open AIRA as an interactive fullscreen 3D human hologram.",
     settings: "Your name, default mode and your data.",
     projects: "Group chats and give Aira standing instructions.",
     pro: "See your plan and limits.",
@@ -105,6 +106,7 @@
     const name = m[1];
     const view = VIEWS[name] ? name : "home";
     current = view;
+    document.body.classList.toggle("aira-hologram-active", view === "hologram");
     const mod = (window.AiraViews || {})[view];
     if (mod) ensureSection(view);
     document.querySelectorAll(".main > .view").forEach((sec) => { sec.hidden = sec.id !== "view-" + view; });
