@@ -5,5 +5,16 @@
     "app.py": {
       "includeFiles": "{pages/**,public/**}"
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "script-src 'self' 'wasm-unsafe-eval';"
+        }
+      ]
+    }
+  ]
 }
