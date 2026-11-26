@@ -132,6 +132,7 @@
     }
   }
   async function route() {
+    try {
     const m = location.hash.match(/^#\/(\w+)(?:\/([a-f0-9]{16}))?/) || [];
     const name = m[1];
     const view = VIEWS[name] ? name : "home";
@@ -157,6 +158,34 @@
       await showModule(view, m[2] || "");
     }
     document.dispatchEvent(new CustomEvent("aira:route", { detail: { view, arg: view === "projects" ? m[2] || "" : "" } }));
+    } catch (error) {
+      console.error("[AIRA] Route failed:", error);
+      const main = $(".main");
+      let panel = $("#aira-route-fatal");
+      if (!panel) {
+        panel = document.createElement("section");
+        panel.id = "aira-route-fatal";
+        panel.className = "view page-wrap aira-module-error";
+        main.appendChild(panel);
+      }
+      document.querySelectorAll(".main > .view").forEach(sec => { sec.hidden = true; });
+      panel.hidden = false;
+      panel.replaceChildren();
+      const card = document.createElement("section");
+      card.className = "card";
+      const title = document.createElement("h2");
+      title.textContent = "AIRA page failed to load";
+      const detail = document.createElement("pre");
+      detail.className = "aira-module-error-detail";
+      detail.textContent = error && error.stack ? error.stack : String(error);
+      const retry = document.createElement("button");
+      retry.className = "primary";
+      retry.type = "button";
+      retry.textContent = "Retry page";
+      retry.addEventListener("click", () => route());
+      card.append(title, detail, retry);
+      panel.appendChild(card);
+    }
   }
   window.addEventListener("hashchange", route);
 
