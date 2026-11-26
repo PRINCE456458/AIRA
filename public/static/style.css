@@ -610,3 +610,19 @@ body.aira-hologram-active #view-hologram{display:block!important;width:100%;heig
 @media(max-width:650px){.aira-holo-page{padding:10px 12px}.aira-holo-main{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;gap:4px}.aira-holo-scene{min-height:0}.aira-holo-panel{max-width:560px;padding:13px 15px;margin:0 auto 2px}.aira-holo-panel h1{font-size:25px;margin:7px 0 2px}.aira-holo-copy{display:none}.aira-holo-controls-label{margin:12px 0 7px}.aira-holo-modes{grid-template-columns:repeat(4,1fr);gap:5px}.aira-holo-modes button{justify-content:center;min-height:37px;padding:6px 4px;font-size:9px}.aira-holo-modes button span{font-size:14px}.aira-holo-note{min-height:0;margin-top:7px;font-size:9px}.aira-holo-footer{margin-top:8px;padding-top:8px}.aira-holo-name{bottom:2%}.aira-holo-hint{display:none}.aira-holo-bottom{font-size:6px;letter-spacing:.06em}.aira-holo-bottom span:nth-child(2){display:none}}
 @media(max-height:650px) and (min-width:651px){.aira-holo-panel{padding:15px}.aira-holo-panel h1{margin-top:12px}.aira-holo-copy{margin-bottom:12px}.aira-holo-controls-label{margin-top:14px}.aira-holo-note{min-height:32px}.aira-holo-main{gap:20px}}
 @media(prefers-reduced-motion:reduce){.aira-holo-modes button{transition:none}}
+
+
+/* Hologram must paint above the decorative cosmic canvas (z-index: 0). */
+body.aira-hologram-active .main,
+body.aira-hologram-active #view-hologram {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+body.aira-hologram-active .aira-holo-page {
+  position: relative;
+  z-index: 1;
+}
+body.aira-hologram-active .aira-holo-canvas {
+  z-index: 2;
+}
